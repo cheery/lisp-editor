@@ -1,3 +1,7 @@
+window.hoverColor = "#222"
+window.selectColor = "#888"
+window.selectCompositeOp = "darker"
+
 window.addEventListener 'load', () ->
     canvas = autoResize document.getElementById('editor')
     bc = canvas.getContext '2d'
@@ -9,6 +13,7 @@ window.addEventListener 'load', () ->
             list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))
         )
     )
+    mouse = mouseInput(canvas)
     window.model = model
 
     draw = () ->
@@ -19,6 +24,7 @@ window.addEventListener 'load', () ->
         model.layout(bc)
         model.x = 50
         model.y = 50
+        model.mousemotion(mouse.point...)
         model.draw(bc)
 
         requestAnimationFrame draw
@@ -35,6 +41,8 @@ window.addEventListener 'load', () ->
 class TextNode
     constructor: (@text) ->
         @type = 'text'
+        @hover = false
+        @selection = {left: -1, right: 1}
 
     layout: (bc) ->
         bc.font = "16px sans-serif"
@@ -43,16 +51,37 @@ class TextNode
         @width  = bc.measureText(@text).width
         @height = 16
 
+    mousemotion: (x, y) ->
+        @hover = (@x <= x < @x+@width) and (@y <= y < @y+@height)
+
     draw: (bc) ->
         bc.font = "16px sans-serif"
         bc.fillStyle = "black"
+        bc.fillStyle = hoverColor if @hover
         bc.fillText @text, @x, @y+@height/2, @width
+
+        if @selection
+            bc.fillStyle = selectColor
+            bc.globalCompositeOperation = selectCompositeOp
+            bc.fillRect(@x+@selection.left, @y, @selection.right - @selection.left, @height)
+            bc.globalCompositeOperation = "source-over"
 
 padding = 8
 
 class ListNode
     constructor: (@list) ->
         @type = 'list'
+        @hover = false
+        @selection = {left: 0, right: padding, row: 0}
+
+    mousemotion: (x, y) ->
+        x -= @x
+        y -= @y
+        childhover = false
+        for item in @list
+            childhover = childhover or item.mousemotion(x, y)
+        @hover = (0 <= x < @width) and (0 <= y < @height) and not childhover
+        return childhover or @hover
 
     layout: (bc) ->
         @x = 0
@@ -99,17 +128,29 @@ class ListNode
 
     draw: (bc) ->
         bc.fillStyle = "white"
+        bc.strokeStyle = "black"
+        bc.strokeStyle = hoverColor if @hover
         bc.fillRect   @x, @y, @width, @height
         bc.strokeRect @x, @y, @width, @height
         bc.save()
         bc.translate(@x, @y)
         for item in @list
             item.draw(bc)
+        if @selection
+            row = @rows[@selection.row]
+            bc.fillStyle = selectColor
+            bc.globalCompositeOperation = selectCompositeOp
+
+            bc.fillRect(@selection.left, row.offset, @selection.right - @selection.left, row.height)
+            bc.globalCompositeOperation = "source-over"
         bc.restore()
 
 class Carriage
     constructor: (@list) ->
         @type = 'cr'
+
+    mousemotion: (x, y) ->
+        return false
 
     layout: (bc) ->
         @x = 0

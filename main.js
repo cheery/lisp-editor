@@ -3,11 +3,18 @@
   var Carriage, ListNode, TextNode, cr, list, padding, text,
     __slice = [].slice;
 
+  window.hoverColor = "#222";
+
+  window.selectColor = "#888";
+
+  window.selectCompositeOp = "darker";
+
   window.addEventListener('load', function() {
-    var bc, canvas, draw, drawBox, model;
+    var bc, canvas, draw, drawBox, model, mouse;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
     model = list(text("define"), list(text("factorial"), text("n")), cr(), list(text("if"), list(text("="), text("n"), text("0")), text("1"), cr(), list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))));
+    mouse = mouseInput(canvas);
     window.model = model;
     draw = function() {
       bc.fillStyle = "#aaa";
@@ -16,6 +23,7 @@
       model.layout(bc);
       model.x = 50;
       model.y = 50;
+      model.mousemotion.apply(model, mouse.point);
       model.draw(bc);
       return requestAnimationFrame(draw);
     };
@@ -32,6 +40,11 @@
     function TextNode(text) {
       this.text = text;
       this.type = 'text';
+      this.hover = false;
+      this.selection = {
+        left: -1,
+        right: 1
+      };
     }
 
     TextNode.prototype.layout = function(bc) {
@@ -42,10 +55,23 @@
       return this.height = 16;
     };
 
+    TextNode.prototype.mousemotion = function(x, y) {
+      return this.hover = ((this.x <= x && x < this.x + this.width)) && ((this.y <= y && y < this.y + this.height));
+    };
+
     TextNode.prototype.draw = function(bc) {
       bc.font = "16px sans-serif";
       bc.fillStyle = "black";
-      return bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
+      if (this.hover) {
+        bc.fillStyle = hoverColor;
+      }
+      bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
+      if (this.selection) {
+        bc.fillStyle = selectColor;
+        bc.globalCompositeOperation = selectCompositeOp;
+        bc.fillRect(this.x + this.selection.left, this.y, this.selection.right - this.selection.left, this.height);
+        return bc.globalCompositeOperation = "source-over";
+      }
     };
 
     return TextNode;
@@ -58,7 +84,27 @@
     function ListNode(list) {
       this.list = list;
       this.type = 'list';
+      this.hover = false;
+      this.selection = {
+        left: 0,
+        right: padding,
+        row: 0
+      };
     }
+
+    ListNode.prototype.mousemotion = function(x, y) {
+      var childhover, item, _i, _len, _ref;
+      x -= this.x;
+      y -= this.y;
+      childhover = false;
+      _ref = this.list;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        item = _ref[_i];
+        childhover = childhover || item.mousemotion(x, y);
+      }
+      this.hover = ((0 <= x && x < this.width)) && ((0 <= y && y < this.height)) && !childhover;
+      return childhover || this.hover;
+    };
 
     ListNode.prototype.layout = function(bc) {
       var item, offset, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
@@ -117,8 +163,12 @@
     };
 
     ListNode.prototype.draw = function(bc) {
-      var item, _i, _len, _ref;
+      var item, row, _i, _len, _ref;
       bc.fillStyle = "white";
+      bc.strokeStyle = "black";
+      if (this.hover) {
+        bc.strokeStyle = hoverColor;
+      }
       bc.fillRect(this.x, this.y, this.width, this.height);
       bc.strokeRect(this.x, this.y, this.width, this.height);
       bc.save();
@@ -127,6 +177,13 @@
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];
         item.draw(bc);
+      }
+      if (this.selection) {
+        row = this.rows[this.selection.row];
+        bc.fillStyle = selectColor;
+        bc.globalCompositeOperation = selectCompositeOp;
+        bc.fillRect(this.selection.left, row.offset, this.selection.right - this.selection.left, row.height);
+        bc.globalCompositeOperation = "source-over";
       }
       return bc.restore();
     };
@@ -140,6 +197,10 @@
       this.list = list;
       this.type = 'cr';
     }
+
+    Carriage.prototype.mousemotion = function(x, y) {
+      return false;
+    };
 
     Carriage.prototype.layout = function(bc) {
       this.x = 0;

@@ -1,7 +1,7 @@
 window.AudioContext ?= window.webkitAudioContext
 
 window.mouseInput = (canvas) ->
-    mouse = {point:vec2.create()}
+    mouse = {point:[0, 0]}
     document.addEventListener 'mousemove', mousemove = (e) ->
         rect = canvas.getBoundingClientRect()
         mouse.point[0] = (e.clientX - rect.left) / rect.width * canvas.width

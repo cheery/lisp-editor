@@ -7,7 +7,7 @@
   window.mouseInput = function(canvas) {
     var mouse, mousemove;
     mouse = {
-      point: vec2.create()
+      point: [0, 0]
     };
     document.addEventListener('mousemove', mousemove = function(e) {
       var rect;
