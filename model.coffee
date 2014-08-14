@@ -9,9 +9,10 @@ class ListNode
         @parent = null
         @length = @list.length
         @hover = false
+        @hoverIndex = 0
         for item in @list
             item.parent = @
-        #@selection = {left: 0, right: padding, row: 0}
+        @selection = null
 
     copy: () ->
         list = []
@@ -31,19 +32,42 @@ class ListNode
     put: (index, buff) ->
         throw "buffer conflict" if buff.type != "listbuffer"
         if buff.link?
-            @list[index...index] = buff.list.copy()
+            @list[index...index] = (item.copy() for item in buff.list)
         else
             @list[index...index] = buff.list
         @length = @list.length
 
+    getRange: () ->
+        return null unless @parent?
+        start = @parent.list.indexOf(@)
+        stop  = start + 1
+        return {start, stop}
+
     mousemotion: (x, y) ->
         x -= @x
         y -= @y
-        childhover = false
+        childhover = null
         for item in @list
-            childhover = childhover or item.mousemotion(x, y)
+            over = item.mousemotion(x, y)
+            childhover = childhover or over
         @hover = (0 <= x < @width) and (0 <= y < @height) and not childhover
-        return childhover or @hover
+
+        for row in @rows
+            if row.offset <= y < row.offset + row.height + padding
+                @hoverIndex = row.start
+                for o in row.offsets
+                    break if x < o
+                    @hoverIndex += 1
+                @hoverIndex = Math.max(@hoverIndex-1, row.start)
+        @hoverIndex = 0       if y < padding
+        @hoverIndex = @length if y > @height
+        @selection = {start:@hoverIndex, stop:@hoverIndex}
+        if childhover?
+            return childhover
+        if @hover
+            return @
+        else
+            return null
 
     layout: (bc) ->
         @x = 0
@@ -57,16 +81,21 @@ class ListNode
             offsets: [padding]
             frames:  []
             height: 16
+            start: 0
+            stop:  0
         }
         offset = padding
         for item in @list
             item.layout(bc)
             if item.type == 'cr'
+                row.stop = row.start + row.frames.length
                 @rows.push row = {
                     offset: row.offset + row.height + padding
                     offsets: [padding]
                     frames: []
                     height: 16
+                    start: row.stop + 1
+                    stop: row.stop + 1
                 }
                 @width  = Math.max(offset, @width)
                 @height = Math.max(row.offset + row.height + 2*padding, @height)
@@ -78,6 +107,7 @@ class ListNode
                 row.offsets.push offset
                 row.frames.push item
                 row.height = Math.max(row.height, item.height)
+        row.stop = row.start + row.frames.length
         @width  = Math.max(offset, @width)
         @height = Math.max(row.offset + row.height + padding, @height)
 
@@ -99,11 +129,29 @@ class ListNode
         for item in @list
             item.draw(bc)
         if @selection
-            row = @rows[@selection.row]
             bc.fillStyle = selectColor
             bc.globalCompositeOperation = selectCompositeOp
-
-            bc.fillRect(@selection.left, row.offset, @selection.right - @selection.left, row.height)
+            for row in @rows
+                if @selection.stop < row.start
+                    continue
+                if row.stop < @selection.start
+                    continue
+                if row.start <= @selection.start
+                    left = row.offsets[@selection.start - row.start] - 1
+                else
+                    left = 0
+                if @selection.stop == @selection.start
+                    right = left - 2
+                    left -= padding - 4
+                else if @selection.stop == row.start
+                    right = row.offsets[0]
+                else if @selection.stop <= row.stop
+                    right = row.offsets[@selection.stop - row.start] - padding + 1
+                else
+                    right = @width
+                if right < left
+                    [left, right] = [right, left]
+                bc.fillRect(left, row.offset - 1, right - left, row.height + padding)
             bc.globalCompositeOperation = "source-over"
         bc.restore()
 
@@ -113,7 +161,9 @@ class TextNode
         @parent = null
         @hover = false
         @length = @text.length
-        #@selection = {left: -1, right: 1}
+        @offsets = []
+        @selection = null
+        @hoverIndex = 0
 
     copy: () ->
         return new TextNode(@text)
@@ -123,7 +173,7 @@ class TextNode
 
     kill: (start, stop) ->
         text = @text[start...stop]
-        @text[start...stop] = []
+        @text = @text[...start] + @text[stop...]
         @length = @text.length
         return new TextBuffer(text, null)
 
@@ -138,9 +188,21 @@ class TextNode
         @y = 0
         @width  = bc.measureText(@text).width
         @height = 16
+        @offsets = [0]
+        for i in [1..@length]
+            @offsets.push bc.measureText(@text[0...i]).width
 
     mousemotion: (x, y) ->
         @hover = (@x <= x < @x+@width) and (@y <= y < @y+@height)
+        @hoverIndex = 0
+        for o in @offsets
+            break if x < o + @x
+            @hoverIndex += 1
+        @hoverIndex = Math.max(@hoverIndex - 1, 0)
+        @selection = {start: @hoverIndex, stop: @hoverIndex}
+        if @hover
+            return @
+        return null
 
     draw: (bc) ->
         bc.font = "16px sans-serif"
@@ -148,15 +210,20 @@ class TextNode
         bc.fillStyle = hoverColor if @hover
         bc.fillText @text, @x, @y+@height/2, @width
 
-        if @selection
+        if @selection?
+            left  = @offsets[@selection.start] - 1
+            right = @offsets[@selection.stop] + 1
             bc.fillStyle = selectColor
             bc.globalCompositeOperation = selectCompositeOp
-            bc.fillRect(@x+@selection.left, @y, @selection.right - @selection.left, @height)
+            bc.fillRect(@x+left, @y, right - left, @height)
             bc.globalCompositeOperation = "source-over"
 
 class Carriage
     constructor: (@list) ->
         @type = 'cr'
+
+    copy: () ->
+        return new Carriage()
 
     mousemotion: (x, y) ->
         return false

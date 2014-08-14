@@ -12,12 +12,20 @@ window.addEventListener 'load', () ->
     mouse = mouseInput(canvas)
     window.model = model
 
-    canvas.addEventListener 'mousedown', () ->
-        tb = textbuffer("L")
-        model.list[0].put 0, tb
+    over = null
 
-        lb = listbuffer(cr(), text("LISP"))
-        model.put model.length, lb
+    #target = model.list[0]
+    #target.selection = {start: 1, stop: 1}
+    #model.selection = {start: 2, stop: 3}
+
+    canvas.addEventListener 'mousedown', () ->
+        if over?
+            lb = listbuffer(cr(), over)
+            lb.link = over
+            model.put model.length, lb
+        else
+            lb = listbuffer(cr(), text("LISP"))
+            model.put model.length, lb
 
     draw = () ->
         bc.fillStyle = "#aaa"
@@ -27,10 +35,10 @@ window.addEventListener 'load', () ->
         model.layout(bc)
         model.x = 50
         model.y = 50
-        model.mousemotion(mouse.point...)
+        over = model.mousemotion(mouse.point...)
         model.draw(bc)
 
-        bc.fillText "click the screen to test PUT -commands", 50, 10
+        bc.fillText "click the screen or contents to test PUT -commands", 50, 10
 
         requestAnimationFrame draw
 

@@ -19,11 +19,13 @@
       this.parent = null;
       this.length = this.list.length;
       this.hover = false;
+      this.hoverIndex = 0;
       _ref = this.list;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];
         item.parent = this;
       }
+      this.selection = null;
     }
 
     ListNode.prototype.copy = function() {
@@ -50,30 +52,86 @@
     };
 
     ListNode.prototype.put = function(index, buff) {
-      var _ref, _ref1;
+      var item, _ref, _ref1;
       if (buff.type !== "listbuffer") {
         throw "buffer conflict";
       }
       if (buff.link != null) {
-        [].splice.apply(this.list, [index, index - index].concat(_ref = buff.list.copy())), _ref;
+        [].splice.apply(this.list, [index, index - index].concat(_ref = (function() {
+          var _i, _len, _ref1, _results;
+          _ref1 = buff.list;
+          _results = [];
+          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+            item = _ref1[_i];
+            _results.push(item.copy());
+          }
+          return _results;
+        })())), _ref;
       } else {
         [].splice.apply(this.list, [index, index - index].concat(_ref1 = buff.list)), _ref1;
       }
       return this.length = this.list.length;
     };
 
+    ListNode.prototype.getRange = function() {
+      var start, stop;
+      if (this.parent == null) {
+        return null;
+      }
+      start = this.parent.list.indexOf(this);
+      stop = start + 1;
+      return {
+        start: start,
+        stop: stop
+      };
+    };
+
     ListNode.prototype.mousemotion = function(x, y) {
-      var childhover, item, _i, _len, _ref;
+      var childhover, item, o, over, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
       x -= this.x;
       y -= this.y;
-      childhover = false;
+      childhover = null;
       _ref = this.list;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];
-        childhover = childhover || item.mousemotion(x, y);
+        over = item.mousemotion(x, y);
+        childhover = childhover || over;
       }
       this.hover = ((0 <= x && x < this.width)) && ((0 <= y && y < this.height)) && !childhover;
-      return childhover || this.hover;
+      _ref1 = this.rows;
+      for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+        row = _ref1[_j];
+        if ((row.offset <= y && y < row.offset + row.height + padding)) {
+          this.hoverIndex = row.start;
+          _ref2 = row.offsets;
+          for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
+            o = _ref2[_k];
+            if (x < o) {
+              break;
+            }
+            this.hoverIndex += 1;
+          }
+          this.hoverIndex = Math.max(this.hoverIndex - 1, row.start);
+        }
+      }
+      if (y < padding) {
+        this.hoverIndex = 0;
+      }
+      if (y > this.height) {
+        this.hoverIndex = this.length;
+      }
+      this.selection = {
+        start: this.hoverIndex,
+        stop: this.hoverIndex
+      };
+      if (childhover != null) {
+        return childhover;
+      }
+      if (this.hover) {
+        return this;
+      } else {
+        return null;
+      }
     };
 
     ListNode.prototype.layout = function(bc) {
@@ -87,7 +145,9 @@
         offset: padding,
         offsets: [padding],
         frames: [],
-        height: 16
+        height: 16,
+        start: 0,
+        stop: 0
       });
       offset = padding;
       _ref = this.list;
@@ -95,11 +155,14 @@
         item = _ref[_i];
         item.layout(bc);
         if (item.type === 'cr') {
+          row.stop = row.start + row.frames.length;
           this.rows.push(row = {
             offset: row.offset + row.height + padding,
             offsets: [padding],
             frames: [],
-            height: 16
+            height: 16,
+            start: row.stop + 1,
+            stop: row.stop + 1
           });
           this.width = Math.max(offset, this.width);
           this.height = Math.max(row.offset + row.height + 2 * padding, this.height);
@@ -113,6 +176,7 @@
           row.height = Math.max(row.height, item.height);
         }
       }
+      row.stop = row.start + row.frames.length;
       this.width = Math.max(offset, this.width);
       this.height = Math.max(row.offset + row.height + padding, this.height);
       _ref1 = this.rows;
@@ -133,7 +197,7 @@
     };
 
     ListNode.prototype.draw = function(bc) {
-      var item, row, _i, _len, _ref;
+      var item, left, right, row, _i, _j, _len, _len1, _ref, _ref1, _ref2;
       bc.fillStyle = "white";
       bc.strokeStyle = "black";
       if (this.hover) {
@@ -149,10 +213,37 @@
         item.draw(bc);
       }
       if (this.selection) {
-        row = this.rows[this.selection.row];
         bc.fillStyle = selectColor;
         bc.globalCompositeOperation = selectCompositeOp;
-        bc.fillRect(this.selection.left, row.offset, this.selection.right - this.selection.left, row.height);
+        _ref1 = this.rows;
+        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
+          row = _ref1[_j];
+          if (this.selection.stop < row.start) {
+            continue;
+          }
+          if (row.stop < this.selection.start) {
+            continue;
+          }
+          if (row.start <= this.selection.start) {
+            left = row.offsets[this.selection.start - row.start] - 1;
+          } else {
+            left = 0;
+          }
+          if (this.selection.stop === this.selection.start) {
+            right = left - 2;
+            left -= padding - 4;
+          } else if (this.selection.stop === row.start) {
+            right = row.offsets[0];
+          } else if (this.selection.stop <= row.stop) {
+            right = row.offsets[this.selection.stop - row.start] - padding + 1;
+          } else {
+            right = this.width;
+          }
+          if (right < left) {
+            _ref2 = [right, left], left = _ref2[0], right = _ref2[1];
+          }
+          bc.fillRect(left, row.offset - 1, right - left, row.height + padding);
+        }
         bc.globalCompositeOperation = "source-over";
       }
       return bc.restore();
@@ -169,6 +260,9 @@
       this.parent = null;
       this.hover = false;
       this.length = this.text.length;
+      this.offsets = [];
+      this.selection = null;
+      this.hoverIndex = 0;
     }
 
     TextNode.prototype.copy = function() {
@@ -180,9 +274,9 @@
     };
 
     TextNode.prototype.kill = function(start, stop) {
-      var text, _ref;
+      var text;
       text = this.text.slice(start, stop);
-      [].splice.apply(this.text, [start, stop - start].concat(_ref = [])), _ref;
+      this.text = this.text.slice(0, start) + this.text.slice(stop);
       this.length = this.text.length;
       return new TextBuffer(text, null);
     };
@@ -196,28 +290,57 @@
     };
 
     TextNode.prototype.layout = function(bc) {
+      var i, _i, _ref, _results;
       bc.font = "16px sans-serif";
       this.x = 0;
       this.y = 0;
       this.width = bc.measureText(this.text).width;
-      return this.height = 16;
+      this.height = 16;
+      this.offsets = [0];
+      _results = [];
+      for (i = _i = 1, _ref = this.length; 1 <= _ref ? _i <= _ref : _i >= _ref; i = 1 <= _ref ? ++_i : --_i) {
+        _results.push(this.offsets.push(bc.measureText(this.text.slice(0, i)).width));
+      }
+      return _results;
     };
 
     TextNode.prototype.mousemotion = function(x, y) {
-      return this.hover = ((this.x <= x && x < this.x + this.width)) && ((this.y <= y && y < this.y + this.height));
+      var o, _i, _len, _ref;
+      this.hover = ((this.x <= x && x < this.x + this.width)) && ((this.y <= y && y < this.y + this.height));
+      this.hoverIndex = 0;
+      _ref = this.offsets;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        o = _ref[_i];
+        if (x < o + this.x) {
+          break;
+        }
+        this.hoverIndex += 1;
+      }
+      this.hoverIndex = Math.max(this.hoverIndex - 1, 0);
+      this.selection = {
+        start: this.hoverIndex,
+        stop: this.hoverIndex
+      };
+      if (this.hover) {
+        return this;
+      }
+      return null;
     };
 
     TextNode.prototype.draw = function(bc) {
+      var left, right;
       bc.font = "16px sans-serif";
       bc.fillStyle = "black";
       if (this.hover) {
         bc.fillStyle = hoverColor;
       }
       bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
-      if (this.selection) {
+      if (this.selection != null) {
+        left = this.offsets[this.selection.start] - 1;
+        right = this.offsets[this.selection.stop] + 1;
         bc.fillStyle = selectColor;
         bc.globalCompositeOperation = selectCompositeOp;
-        bc.fillRect(this.x + this.selection.left, this.y, this.selection.right - this.selection.left, this.height);
+        bc.fillRect(this.x + left, this.y, right - left, this.height);
         return bc.globalCompositeOperation = "source-over";
       }
     };
@@ -231,6 +354,10 @@
       this.list = list;
       this.type = 'cr';
     }
+
+    Carriage.prototype.copy = function() {
+      return new Carriage();
+    };
 
     Carriage.prototype.mousemotion = function(x, y) {
       return false;
