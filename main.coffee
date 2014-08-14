@@ -12,6 +12,9 @@ window.addEventListener 'load', () ->
     mouse = mouseInput(canvas)
     window.model = model
 
+    keyboardEvents canvas, (keyCode, text) ->
+        console.log keyCode, text
+
     over = null
 
     #target = model.list[0]

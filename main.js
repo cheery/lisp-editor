@@ -7,6 +7,9 @@
     model = list(text("define"), list(text("factorial"), text("n")), cr(), list(text("if"), list(text("="), text("n"), text("0")), text("1"), cr(), list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))));
     mouse = mouseInput(canvas);
     window.model = model;
+    keyboardEvents(canvas, function(keyCode, text) {
+      return console.log(keyCode, text);
+    });
     over = null;
     canvas.addEventListener('mousedown', function() {
       var lb;
