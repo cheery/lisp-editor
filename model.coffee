@@ -41,7 +41,7 @@ class ListNode
         return null unless @parent?
         start = @parent.list.indexOf(@)
         stop  = start + 1
-        return {start, stop}
+        return {target:@parent, start, stop}
 
     mousemotion: (x, y) ->
         x -= @x
@@ -61,7 +61,6 @@ class ListNode
                 @hoverIndex = Math.max(@hoverIndex-1, row.start)
         @hoverIndex = 0       if y < padding
         @hoverIndex = @length if y > @height
-        @selection = {start:@hoverIndex, stop:@hoverIndex}
         if childhover?
             return childhover
         if @hover
@@ -192,6 +191,12 @@ class TextNode
         for i in [1..@length]
             @offsets.push bc.measureText(@text[0...i]).width
 
+    getRange: () ->
+        return null unless @parent?
+        start = @parent.list.indexOf(@)
+        stop  = start + 1
+        return {target:@parent, start, stop}
+
     mousemotion: (x, y) ->
         @hover = (@x <= x < @x+@width) and (@y <= y < @y+@height)
         @hoverIndex = 0
@@ -199,7 +204,6 @@ class TextNode
             break if x < o + @x
             @hoverIndex += 1
         @hoverIndex = Math.max(@hoverIndex - 1, 0)
-        @selection = {start: @hoverIndex, stop: @hoverIndex}
         if @hover
             return @
         return null

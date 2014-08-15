@@ -81,6 +81,7 @@
       start = this.parent.list.indexOf(this);
       stop = start + 1;
       return {
+        target: this.parent,
         start: start,
         stop: stop
       };
@@ -120,10 +121,6 @@
       if (y > this.height) {
         this.hoverIndex = this.length;
       }
-      this.selection = {
-        start: this.hoverIndex,
-        stop: this.hoverIndex
-      };
       if (childhover != null) {
         return childhover;
       }
@@ -304,6 +301,20 @@
       return _results;
     };
 
+    TextNode.prototype.getRange = function() {
+      var start, stop;
+      if (this.parent == null) {
+        return null;
+      }
+      start = this.parent.list.indexOf(this);
+      stop = start + 1;
+      return {
+        target: this.parent,
+        start: start,
+        stop: stop
+      };
+    };
+
     TextNode.prototype.mousemotion = function(x, y) {
       var o, _i, _len, _ref;
       this.hover = ((this.x <= x && x < this.x + this.width)) && ((this.y <= y && y < this.y + this.height));
@@ -317,10 +328,6 @@
         this.hoverIndex += 1;
       }
       this.hoverIndex = Math.max(this.hoverIndex - 1, 0);
-      this.selection = {
-        start: this.hoverIndex,
-        stop: this.hoverIndex
-      };
       if (this.hover) {
         return this;
       }
