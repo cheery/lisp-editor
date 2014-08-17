@@ -27,14 +27,19 @@ class ListNode
         list = @list[start...stop]
         @list[start...stop] = []
         @length = @list.length
+        for item in list
+            item.parent = null
         return new ListBuffer(list, null)
 
     put: (index, buff) ->
         throw "buffer conflict" if buff.type != "listbuffer"
         if buff.link?
-            @list[index...index] = (item.copy() for item in buff.list)
+            list = (item.copy() for item in buff.list)
         else
-            @list[index...index] = buff.list
+            list = buff.list
+        for item in list
+            item.parent = @
+        @list[index...index] = list
         @length = @list.length
 
     getRange: () ->

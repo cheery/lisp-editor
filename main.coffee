@@ -13,16 +13,93 @@ window.addEventListener 'load', () ->
     window.model = model
 
     over = null
+    mode = null
 
     selection = textright leftSelection model
     selection.mark()
 
+    insertMode = (keyCode, txt) ->
+        selection.unmark()
+        if keyCode == 27
+            mode = selectMode
+        if keyCode == 13
+            if selection.target.type == 'text'
+                if 0 < selection.head < selection.target.length
+                    node_split selection.target, selection.head
+                    {target, stop} = selection.target.getRange()
+                    selection = new Selection(target, stop, stop)
+                else if selection.head == selection.target.length
+                    {target, stop} = selection.target.getRange()
+                    selection = new Selection(target, stop, stop)
+                else if selection.head == 0
+                    {target, start} = selection.target.getRange()
+                    selection = new Selection(target, start, start)
+            selection.target.put selection.head, listbuffer(cr())
+            head = selection.head + 1
+            selection.update(head, head)
+        if txt == " "
+            if selection.target.type == 'text'
+                {head, target} = selection
+                if head == target.length
+                    {target, stop} = target.getRange()
+                    selection = new Selection(target, stop, stop)
+                else if head == 0
+                    {target, start} = target.getRange()
+                    selection = new Selection(target, start, start)
+                else
+                    selection = node_split target, head
+        if txt == "("
+            if selection.target.type == 'text'
+                {head, target} = selection
+                if head == target.length
+                    {target, stop} = target.getRange()
+                    selection = new Selection(target, stop, stop)
+                else if head == 0
+                    {target, start} = target.getRange()
+                    selection = new Selection(target, start, start)
+                else
+                    selection = node_split target, head
+                    {target, stop} = target.getRange()
+                    selection = new Selection(target, stop, stop)
+            obj = list()
+            selection.target.put selection.head, listbuffer(obj)
+            selection.target = obj
+            selection.update(0, 0)
+        if txt == ")"
+            if selection.target.type == 'text'
+                {target} = selection.target.getRange()
+            else
+                {target} = selection
+            if (range = target.getRange())?
+                selection = new Selection(range.target, range.stop, range.stop)
+        else if txt.length > 0
+            if selection.target.type == 'text'
+                tb = textbuffer(txt)
+                selection.target.put selection.head, tb
+                head = selection.head+txt.length
+                selection.update(head, head)
+            if selection.target.type == 'list'
+                tnode = text(txt)
+                lb = listbuffer(tnode)
+                selection.target.put selection.head, lb
+                selection = new Selection(tnode, txt.length, txt.length)
+        selection.mark()
 
+    node_split = (target, index) ->
+        node = text(target.kill(index, target.length).text)
+        {target, stop} = target.getRange()
+        target.put stop, listbuffer(node)
+        return new Selection(node, 0, 0)
+
+
+    insertMode.tag = "insert"
     #target = model.list[0]
     #target.selection = {start: 1, stop: 1}
     #model.selection = {start: 2, stop: 3}
     selectMode = (keyCode, text) ->
         selection.unmark()
+        if text == 'i'
+            mode = insertMode
         if text == 'l'
             if selection.head < selection.target.length and selection.target.type == 'text'
                 selection.update(selection.head+1, selection.head+1)
@@ -46,6 +123,7 @@ window.addEventListener 'load', () ->
             if selection.target.type == 'text'
                 selection.update(0, 0)
         selection.mark()
+    selectMode.tag = "select"
 
     mode = selectMode
     keyboardEvents canvas, (keyCode, text) ->
@@ -72,6 +150,9 @@ window.addEventListener 'load', () ->
         model.draw(bc)
 
         bc.fillText "press (h,l,w,e,b) -keys to try basic motions", 50, 10
+        bc.fillText "(i and ESC) to enter and leave insert -mode", 50, 30
+
+        bc.fillText "mode: " + mode.tag, 500, 10
 
         requestAnimationFrame draw
 

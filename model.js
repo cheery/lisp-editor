@@ -44,32 +44,41 @@
     };
 
     ListNode.prototype.kill = function(start, stop) {
-      var list, _ref;
+      var item, list, _i, _len, _ref;
       list = this.list.slice(start, stop);
       [].splice.apply(this.list, [start, stop - start].concat(_ref = [])), _ref;
       this.length = this.list.length;
+      for (_i = 0, _len = list.length; _i < _len; _i++) {
+        item = list[_i];
+        item.parent = null;
+      }
       return new ListBuffer(list, null);
     };
 
     ListNode.prototype.put = function(index, buff) {
-      var item, _ref, _ref1;
+      var item, list, _i, _len;
       if (buff.type !== "listbuffer") {
         throw "buffer conflict";
       }
       if (buff.link != null) {
-        [].splice.apply(this.list, [index, index - index].concat(_ref = (function() {
-          var _i, _len, _ref1, _results;
-          _ref1 = buff.list;
+        list = (function() {
+          var _i, _len, _ref, _results;
+          _ref = buff.list;
           _results = [];
-          for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
-            item = _ref1[_i];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            item = _ref[_i];
             _results.push(item.copy());
           }
           return _results;
-        })())), _ref;
+        })();
       } else {
-        [].splice.apply(this.list, [index, index - index].concat(_ref1 = buff.list)), _ref1;
+        list = buff.list;
       }
+      for (_i = 0, _len = list.length; _i < _len; _i++) {
+        item = list[_i];
+        item.parent = this;
+      }
+      [].splice.apply(this.list, [index, index - index].concat(list)), list;
       return this.length = this.list.length;
     };
 
