@@ -72,6 +72,7 @@
         })();
       } else {
         list = buff.list;
+        buff.link = this;
       }
       for (_i = 0, _len = list.length; _i < _len; _i++) {
         item = list[_i];

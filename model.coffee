@@ -36,6 +36,7 @@ class ListNode
             list = (item.copy() for item in buff.list)
         else
             list = buff.list
+            buff.link = @
         for item in list
             item.parent = @
         @list[index...index] = list
