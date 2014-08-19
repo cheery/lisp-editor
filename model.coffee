@@ -1,7 +1,9 @@
 window.hoverColor = "#222"
 window.selectColor = "#888"
 window.selectCompositeOp = "darker"
-window.padding = 8
+window.padding = 0
+window.spacing = 4
+window.indentation = 16
 
 class ListNode
     constructor: (@list) ->
@@ -92,7 +94,7 @@ class ListNode
             start: 0
             stop:  0
         }
-        offset = padding
+        offset = padding + indentation
         for item in @list
             item.layout(bc)
             if item.type == 'cr'
@@ -107,11 +109,11 @@ class ListNode
                 }
                 @width  = Math.max(offset, @width)
                 @height = Math.max(row.offset + row.height + 2*padding, @height)
-                offset = padding
+                offset = padding + indentation
             else
                 item.x = offset
                 item.y = row.offset
-                offset += padding + item.width
+                offset += spacing + item.width
                 row.offsets.push offset
                 row.frames.push item
                 row.height = Math.max(row.height, item.height)
@@ -131,11 +133,11 @@ class ListNode
         bc.strokeStyle = "black"
         bc.strokeStyle = hoverColor if @hover
         bc.fillRect   @x, @y, @width, @height
-        if @parent?
-            if @rows.length == 1
-                bc.strokeRect @x, @y, @width, @height
-            else
-                bc.strokeRect @x, @y, @width, @height
+#        if @parent?
+#            if @rows.length == 1
+#                bc.strokeRect @x, @y, @width, @height
+#            else
+#                bc.strokeRect @x, @y, @width, @height
         bc.save()
         bc.translate(@x, @y)
         for item in @list

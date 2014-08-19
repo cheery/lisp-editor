@@ -9,7 +9,11 @@
 
   window.selectCompositeOp = "darker";
 
-  window.padding = 8;
+  window.padding = 0;
+
+  window.spacing = 4;
+
+  window.indentation = 16;
 
   ListNode = (function() {
     function ListNode(list) {
@@ -162,7 +166,7 @@
         start: 0,
         stop: 0
       });
-      offset = padding;
+      offset = padding + indentation;
       _ref = this.list;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];
@@ -179,11 +183,11 @@
           });
           this.width = Math.max(offset, this.width);
           this.height = Math.max(row.offset + row.height + 2 * padding, this.height);
-          offset = padding;
+          offset = padding + indentation;
         } else {
           item.x = offset;
           item.y = row.offset;
-          offset += padding + item.width;
+          offset += spacing + item.width;
           row.offsets.push(offset);
           row.frames.push(item);
           row.height = Math.max(row.height, item.height);
@@ -217,13 +221,6 @@
         bc.strokeStyle = hoverColor;
       }
       bc.fillRect(this.x, this.y, this.width, this.height);
-      if (this.parent != null) {
-        if (this.rows.length === 1) {
-          bc.strokeRect(this.x, this.y, this.width, this.height);
-        } else {
-          bc.strokeRect(this.x, this.y, this.width, this.height);
-        }
-      }
       bc.save();
       bc.translate(this.x, this.y);
       _ref = this.list;
