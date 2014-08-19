@@ -166,7 +166,7 @@
         start: 0,
         stop: 0
       });
-      offset = padding + indentation;
+      offset = padding;
       _ref = this.list;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];

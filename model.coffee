@@ -94,7 +94,7 @@ class ListNode
             start: 0
             stop:  0
         }
-        offset = padding + indentation
+        offset = padding
         for item in @list
             item.layout(bc)
             if item.type == 'cr'
