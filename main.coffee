@@ -5,7 +5,8 @@ window.addEventListener 'load', () ->
     model = list(
         text("define"), list(text("factorial"), text("n")), cr(),
         list(
-            text("if"), list(text("="), text("n"), text("0")), text("1"), cr(),
+            text("if"), list(text("="), text("n"), text("0")), cr(),
+            text("1"), cr(),
             list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))
         )
     )
