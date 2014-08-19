@@ -6,7 +6,7 @@
     var bc, canvas, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, selectMode, selection, stepLeft, stepRight, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
-    model = list(text("define"), list(text("factorial"), text("n")), cr(), list(text("if"), list(text("="), text("n"), text("0")), cr(), text("1"), cr(), list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))));
+    model = list(text("define"), list(text("factorial"), text("n")), cr(), list(text("if"), list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(text("else"), cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))));
     mouse = mouseInput(canvas);
     window.model = model;
     over = null;

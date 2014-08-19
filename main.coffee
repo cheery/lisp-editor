@@ -6,9 +6,10 @@ window.addEventListener 'load', () ->
         text("define"), list(text("factorial"), text("n")), cr(),
         list(
             text("if"), list(text("="), text("n"), text("0")), cr(),
-            text("1"), cr(),
-            list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))
-        )
+                text("1")), cr(),
+        list(
+            text("else"), cr(),
+            list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1")))))
     )
     mouse = mouseInput(canvas)
     window.model = model
