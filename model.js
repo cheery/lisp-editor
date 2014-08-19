@@ -218,7 +218,13 @@
       }
       bc.fillRect(this.x, this.y, this.width, this.height);
       if (this.parent != null) {
-        bc.strokeRect(this.x, this.y, this.width, this.height);
+        if (this.rows.length === 1) {
+          bc.strokeRect(this.x, this.y + padding / 2, this.width, 0);
+          bc.strokeRect(this.x, this.y + this.height - padding / 2, this.width, 0);
+        } else {
+          bc.strokeRect(this.x, this.y, 0, this.height);
+          bc.strokeRect(this.x + this.width, this.y, 0, this.height);
+        }
       }
       bc.save();
       bc.translate(this.x, this.y);

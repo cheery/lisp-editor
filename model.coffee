@@ -131,7 +131,13 @@ class ListNode
         bc.strokeStyle = "black"
         bc.strokeStyle = hoverColor if @hover
         bc.fillRect   @x, @y, @width, @height
-        bc.strokeRect @x, @y, @width, @height if @parent?
+        if @parent?
+            if @rows.length == 1
+                bc.strokeRect @x, @y+padding/2, @width, 0
+                bc.strokeRect @x, @y+@height-padding/2, @width, 0
+            else
+                bc.strokeRect @x, @y, 0, @height
+                bc.strokeRect @x+@width, @y, 0, @height
         bc.save()
         bc.translate(@x, @y)
         for item in @list
