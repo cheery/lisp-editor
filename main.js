@@ -6,7 +6,7 @@
     var bc, canvas, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, selectMode, selection, stepLeft, stepRight, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
-    model = list(text("define"), list(text("factorial"), text("n")), cr(), list(text("if"), list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(text("else"), cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))));
+    model = list(list(text("factorial"), text("n")), cr(), labelled('cond', list(list(list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))))));
     mouse = mouseInput(canvas);
     window.model = model;
     over = null;
@@ -388,6 +388,8 @@
       selection.draw(bc);
       bc.fillStyle = "white";
       bc.fillText("-- " + mode.tag + " --", 50, canvas.height - 10);
+      bc.fillText("There is one special form here already (cond, marked in yellow),", 50, 10);
+      bc.fillText("unfortunately no insertion method for them yet.", 50, 30);
       return requestAnimationFrame(draw);
     };
     drawBox = function(x, y, w, h) {

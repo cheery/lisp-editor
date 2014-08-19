@@ -15,6 +15,8 @@
 
   window.indentation = 16;
 
+  window.condStroke = "#888800";
+
   ListNode = (function() {
     function ListNode(list) {
       var item, _i, _len, _ref;
@@ -29,6 +31,7 @@
         item = _ref[_i];
         item.parent = this;
       }
+      this.label = null;
     }
 
     ListNode.prototype.copy = function() {
@@ -152,7 +155,11 @@
     };
 
     ListNode.prototype.layout = function(bc) {
-      var item, offset, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      var correction, item, offset, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      correction = 0;
+      if (this.label === 'cond') {
+        correction = -indentation;
+      }
       this.x = 0;
       this.y = 0;
       this.width = 0;
@@ -183,7 +190,7 @@
           });
           this.width = Math.max(offset, this.width);
           this.height = Math.max(row.offset + row.height + 2 * padding, this.height);
-          offset = padding + indentation;
+          offset = padding + indentation + correction;
         } else {
           item.x = offset;
           item.y = row.offset;
@@ -280,7 +287,11 @@
       node = this;
       while (node.parent != null) {
         _ref3 = node.getPosition(), x = _ref3.x, y = _ref3.y;
+        if (node.label === 'cond') {
+          bc.strokeStyle = condStroke;
+        }
         bc.strokeRect(x, y, node.width, node.height);
+        bc.strokeStyle = 'black';
         node = node.parent;
       }
       return bc.globalCompositeOperation = "source-over";
@@ -405,7 +416,11 @@
       node = this.parent;
       while (node.parent != null) {
         _ref1 = node.getPosition(), x = _ref1.x, y = _ref1.y;
+        if (node.label === 'cond') {
+          bc.strokeStyle = condStroke;
+        }
         bc.strokeRect(x, y, node.width, node.height);
+        bc.strokeStyle = 'black';
         node = node.parent;
       }
       return bc.globalCompositeOperation = "source-over";
@@ -505,6 +520,11 @@
       return null;
     }
     return node.type;
+  };
+
+  window.labelled = function(label, node) {
+    node.label = label;
+    return node;
   };
 
 }).call(this);

@@ -4,6 +4,7 @@ window.selectCompositeOp = "darker"
 window.padding = 0
 window.spacing = 4
 window.indentation = 16
+window.condStroke = "#888800"
 
 class ListNode
     constructor: (@list) ->
@@ -14,6 +15,7 @@ class ListNode
         @hoverIndex = 0
         for item in @list
             item.parent = @
+        @label = null
 
     copy: () ->
         list = []
@@ -80,6 +82,9 @@ class ListNode
             return null
 
     layout: (bc) ->
+        correction = 0
+        if @label == 'cond'
+            correction = -indentation
         @x = 0
         @y = 0
         @width  = 0
@@ -109,7 +114,7 @@ class ListNode
                 }
                 @width  = Math.max(offset, @width)
                 @height = Math.max(row.offset + row.height + 2*padding, @height)
-                offset = padding + indentation
+                offset = padding + indentation + correction
             else
                 item.x = offset
                 item.y = row.offset
@@ -172,7 +177,10 @@ class ListNode
         node = @
         while node.parent?
             {x, y} = node.getPosition()
+            if node.label == 'cond'
+                bc.strokeStyle = condStroke
             bc.strokeRect x, y, node.width, node.height
+            bc.strokeStyle = 'black'
             node = node.parent
         bc.globalCompositeOperation = "source-over"
 
@@ -250,7 +258,10 @@ class TextNode
         node = @parent
         while node.parent?
             {x, y} = node.getPosition()
+            if node.label == 'cond'
+                bc.strokeStyle = condStroke
             bc.strokeRect x, y, node.width, node.height
+            bc.strokeStyle = 'black'
             node = node.parent
         bc.globalCompositeOperation = "source-over"
 
@@ -294,3 +305,7 @@ window.isCr   = (node) -> node? and node.type == 'cr'
 window.nodeType = (node) ->
     return null unless node? and node.type?
     return node.type
+
+window.labelled = (label, node) ->
+    node.label = label
+    return node

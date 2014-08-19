@@ -2,14 +2,17 @@ window.addEventListener 'load', () ->
     canvas = autoResize document.getElementById('editor')
     bc = canvas.getContext '2d'
 
+
     model = list(
-        text("define"), list(text("factorial"), text("n")), cr(),
-        list(
-            text("if"), list(text("="), text("n"), text("0")), cr(),
-                text("1")), cr(),
-        list(
-            text("else"), cr(),
-            list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1")))))
+        list(text("factorial"), text("n")), cr(),
+        labelled 'cond', list(
+            list(
+                list(text("="), text("n"), text("0")), cr(),
+                text("1"))
+            cr()
+            list(cr(),
+                list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1")))))
+        )
     )
     mouse = mouseInput(canvas)
     window.model = model
@@ -326,6 +329,8 @@ window.addEventListener 'load', () ->
 
         bc.fillStyle = "white"
         bc.fillText "-- " + mode.tag + " --", 50, canvas.height - 10
+        bc.fillText "There is one special form here already (cond, marked in yellow),", 50, 10
+        bc.fillText "unfortunately no insertion method for them yet.", 50, 30
 
         requestAnimationFrame draw
 
