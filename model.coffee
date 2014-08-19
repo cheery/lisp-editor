@@ -12,7 +12,6 @@ class ListNode
         @hoverIndex = 0
         for item in @list
             item.parent = @
-        @selection = null
 
     copy: () ->
         list = []
@@ -41,6 +40,10 @@ class ListNode
             item.parent = @
         @list[index...index] = list
         @length = @list.length
+
+    get: (index) ->
+        return null unless 0 <= index < @length
+        return @list[index]
 
     getRange: () ->
         return null unless @parent?
@@ -132,32 +135,39 @@ class ListNode
         bc.translate(@x, @y)
         for item in @list
             item.draw(bc)
-        if @selection
-            bc.fillStyle = selectColor
-            bc.globalCompositeOperation = selectCompositeOp
-            for row in @rows
-                if @selection.stop < row.start
-                    continue
-                if row.stop < @selection.start
-                    continue
-                if row.start <= @selection.start
-                    left = row.offsets[@selection.start - row.start] - 1
-                else
-                    left = 0
-                if @selection.stop == @selection.start
-                    right = left - 2
-                    left -= padding - 4
-                else if @selection.stop == row.start
-                    right = row.offsets[0]
-                else if @selection.stop <= row.stop
-                    right = row.offsets[@selection.stop - row.start] - padding + 1
-                else
-                    right = @width
-                if right < left
-                    [left, right] = [right, left]
-                bc.fillRect(left, row.offset - 1, right - left, row.height + padding)
-            bc.globalCompositeOperation = "source-over"
         bc.restore()
+
+    getPosition: () ->
+        x = y = 0
+        {x, y} = @parent.getPosition() if @parent
+        return {x:x+@x, y:y+@y}
+
+    drawSelection: (bc, start, stop) ->
+        {x, y} = @getPosition()
+        bc.fillStyle = selectColor
+        bc.globalCompositeOperation = selectCompositeOp
+        for row in @rows
+            if stop < row.start
+                continue
+            if row.stop < start
+                continue
+            if row.start <= start
+                left = row.offsets[start - row.start] - 1
+            else
+                left = 0
+            if stop == start
+                right = left - 2
+                left -= padding - 4
+            else if stop == row.start
+                right = row.offsets[0]
+            else if stop <= row.stop
+                right = row.offsets[stop - row.start] - padding + 1
+            else
+                right = @width
+            if right < left
+                [left, right] = [right, left]
+            bc.fillRect(x+left, y+row.offset - 1, right - left, row.height + padding)
+        bc.globalCompositeOperation = "source-over"
 
 class TextNode
     constructor: (@text) ->
@@ -166,7 +176,6 @@ class TextNode
         @hover = false
         @length = @text.length
         @offsets = []
-        @selection = null
         @hoverIndex = 0
 
     copy: () ->
@@ -219,13 +228,19 @@ class TextNode
         bc.fillStyle = hoverColor if @hover
         bc.fillText @text, @x, @y+@height/2, @width
 
-        if @selection?
-            left  = @offsets[@selection.start] - 1
-            right = @offsets[@selection.stop] + 1
-            bc.fillStyle = selectColor
-            bc.globalCompositeOperation = selectCompositeOp
-            bc.fillRect(@x+left, @y, right - left, @height)
-            bc.globalCompositeOperation = "source-over"
+    getPosition: () ->
+        x = y = 0
+        {x, y} = @parent.getPosition() if @parent
+        return {x:x+@x, y:y+@y}
+
+    drawSelection: (bc, start, stop) ->
+        {x, y} = @getPosition()
+        left  = @offsets[start] - 1
+        right = @offsets[stop] + 1
+        bc.fillStyle = selectColor
+        bc.globalCompositeOperation = selectCompositeOp
+        bc.fillRect(x+left, y, right - left, @height)
+        bc.globalCompositeOperation = "source-over"
 
 class Carriage
     constructor: (@list) ->
@@ -259,3 +274,11 @@ window.list = (data...) -> new ListNode(data)
 
 window.listbuffer = (list...) -> new ListBuffer(list, null)
 window.textbuffer = (text) -> new TextBuffer(text, null)
+
+window.isText = (node) -> node? and node.type == 'text'
+window.isList = (node) -> node? and node.type == 'list'
+window.isCr   = (node) -> node? and node.type == 'cr'
+
+window.nodeType = (node) ->
+    return null unless node? and node.type?
+    return node.type

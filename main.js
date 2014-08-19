@@ -3,7 +3,7 @@
   var Selection, leftSelection, rightSelection, textleft, textright, travelLeft, travelRight;
 
   window.addEventListener('load', function() {
-    var bc, canvas, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, selectMode, selection, stepLeft, stepRight;
+    var bc, canvas, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, selectMode, selection, stepLeft, stepRight, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
     model = list(text("define"), list(text("factorial"), text("n")), cr(), list(text("if"), list(text("="), text("n"), text("0")), text("1"), cr(), list(text("*"), text("n"), list(text("factorial"), list(text("-"), text("n"), text("1"))))));
@@ -12,29 +12,26 @@
     over = null;
     mode = null;
     selection = textright(leftSelection(model));
-    selection.mark();
     insertMode = function(keyCode, txt) {
-      selection.unmark();
       if (keyCode === 27) {
-        mode = selectMode;
+        return mode = selectMode;
       } else if (keyCode === 13) {
-        insertCr();
+        return insertCr();
       } else if (txt === " ") {
-        insertSpace();
+        return insertSpace();
       } else if (txt === "(") {
-        insertBox();
+        return insertBox();
       } else if (txt === ")") {
-        outOfBox();
+        return outOfBox();
       } else if (txt.length > 0) {
-        insertCharacter(txt);
+        return insertCharacter(txt);
       } else if (keyCode === 8) {
-        selection = delLeft(selection);
+        return selection = delLeft(selection);
       } else if (keyCode === 46) {
-        selection = delRight(selection);
+        return selection = delRight(selection);
       } else {
-        console.log(keyCode);
+        return console.log(keyCode);
       }
-      return selection.mark();
     };
     insertMode.tag = "insert";
     delLeft = function(selection) {
@@ -52,7 +49,7 @@
         } else {
           _ref1 = target.getRange(), node = _ref1.target, start = _ref1.start, stop = _ref1.stop;
           if (start > 0) {
-            before = node.list[start - 1];
+            before = node.get(start - 1);
             if (before.type === 'text') {
               textnode = text(before.text + target.text);
               index = before.length;
@@ -66,7 +63,7 @@
       }
       if (target.type === 'list') {
         if (head > 0) {
-          before = target.list[head - 1];
+          before = target.get(head - 1);
           if (before.type === 'list') {
             return new Selection(before, before.length, before.length);
           }
@@ -100,7 +97,7 @@
         } else {
           _ref1 = target.getRange(), node = _ref1.target, start = _ref1.start, stop = _ref1.stop;
           if (stop < node.length) {
-            ahead = node.list[stop];
+            ahead = node.get(stop);
             if (ahead.type === 'text') {
               textnode = text(target.text + ahead.text);
               index = target.length;
@@ -114,7 +111,7 @@
       }
       if (target.type === 'list') {
         if (head < target.length) {
-          ahead = target.list[head];
+          ahead = target.get(head);
           if (ahead.type === 'list') {
             return new Selection(ahead, 0, 0);
           }
@@ -134,18 +131,65 @@
       }
       return selection;
     };
-    selectMode = function(keyCode, text) {
-      selection.unmark();
-      if (text === 'i') {
+    copybuffer = null;
+    visualMode = function(keyCode, text) {
+      var head, inclusive, start, stop, tail, target, _ref, _ref1, _ref2;
+      if (keyCode === 27) {
+        mode = selectMode;
+        return selection.update(selection.head, selection.head, false);
+      } else if (text === 'h') {
+        target = selection.target, head = selection.head, tail = selection.tail, inclusive = selection.inclusive;
+        if (head > 0) {
+          return selection.update(head - 1, tail, inclusive);
+        } else {
+          _ref = target.getRange(), target = _ref.target, start = _ref.start;
+          return selection = new Selection(target, start, start, true);
+        }
+      } else if (text === 'l') {
+        target = selection.target, head = selection.head, tail = selection.tail, inclusive = selection.inclusive;
+        if (head < target.length - 1) {
+          return selection.update(head + 1, tail, inclusive);
+        } else {
+          _ref1 = target.getRange(), target = _ref1.target, start = _ref1.start;
+          return selection = new Selection(target, start, start, true);
+        }
+      } else if (text === 'v' && (selection.target.parent != null)) {
+        _ref2 = selection.target.getRange(), target = _ref2.target, start = _ref2.start;
+        return selection = new Selection(target, start, start, true);
+      } else if (text === 'd') {
+        target = selection.target, start = selection.start, stop = selection.stop;
+        copybuffer = target.kill(start, stop);
+        selection.update(start, start, false);
+        return mode = selectMode;
+      } else if (text === 'y') {
+        target = selection.target, start = selection.start, stop = selection.stop;
+        copybuffer = target.yank(start, stop);
+        selection.update(start, start, false);
+        return mode = selectMode;
+      }
+    };
+    visualMode.tag = "visual";
+    selectMode = function(keyCode, txt) {
+      var buf, head, start, stop, target, _ref, _ref1, _ref2, _ref3;
+      if (txt === ' ' && selection.target.type === 'text') {
+        if (selection.head === selection.target.length) {
+          _ref = selection.target.getRange(), target = _ref.target, stop = _ref.stop;
+          selection = new Selection(target, stop, stop);
+        } else if (selection.head === 0) {
+          _ref1 = selection.target.getRange(), target = _ref1.target, start = _ref1.start;
+          selection = new Selection(target, start, start);
+        }
+      }
+      if (txt === 'i') {
         mode = insertMode;
       }
-      if (text === 'l') {
+      if (txt === 'l') {
         selection = stepRight(selection);
       }
-      if (text === 'w') {
+      if (txt === 'w') {
         selection = textright(travelRight(selection));
       }
-      if (text === 'e') {
+      if (txt === 'e') {
         if (selection.target.type !== 'text' || selection.head === selection.target.length) {
           selection = textright(travelRight(selection));
         }
@@ -153,10 +197,10 @@
           selection.update(selection.target.length, selection.target.length);
         }
       }
-      if (text === 'h') {
+      if (txt === 'h') {
         selection = stepLeft(selection);
       }
-      if (text === 'b') {
+      if (txt === 'b') {
         if (selection.target.type !== 'text' || selection.head === 0) {
           selection = textleft(travelLeft(selection));
         }
@@ -164,7 +208,53 @@
           selection.update(0, 0);
         }
       }
-      return selection.mark();
+      if (txt === 'v') {
+        mode = visualMode;
+        selection.update(selection.head, selection.tail, true);
+      }
+      if (txt === 'P' && (copybuffer != null)) {
+        target = selection.target, head = selection.head;
+        switch (nodeType(target)) {
+          case "text":
+            if (copybuffer.type === 'textbuffer') {
+              target.put(head, copybuffer);
+            }
+            if (copybuffer.type === 'listbuffer') {
+              _ref2 = target.getRange(), target = _ref2.target, start = _ref2.start;
+              target.put(start, copybuffer);
+            }
+            break;
+          case "list":
+            if (copybuffer.type === 'textbuffer') {
+              buf = listbuffer(text(copybuffer.text));
+              target.put(head, buf);
+            }
+            if (copybuffer.type === 'listbuffer') {
+              target.put(head, copybuffer);
+            }
+        }
+      }
+      if (txt === 'p' && (copybuffer != null)) {
+        target = selection.target, head = selection.head;
+        switch (nodeType(target)) {
+          case "text":
+            if (copybuffer.type === 'textbuffer') {
+              target.put(head, copybuffer);
+            }
+            if (copybuffer.type === 'listbuffer') {
+              _ref3 = target.getRange(), target = _ref3.target, stop = _ref3.stop;
+              return target.put(stop, copybuffer);
+            }
+            break;
+          case "list":
+            if (copybuffer.type === 'textbuffer') {
+              target.put(head, listbuffer(text(copybuffer.text)));
+            }
+            if (copybuffer.type === 'listbuffer') {
+              return target.put(head, copybuffer);
+            }
+        }
+      }
     };
     selectMode.tag = "select";
     stepLeft = function(selection) {
@@ -255,17 +345,18 @@
     };
     insertCharacter = function(txt) {
       var head, lb, tb, tnode;
-      if (selection.target.type === 'text') {
-        tb = textbuffer(txt);
-        selection.target.put(selection.head, tb);
-        head = selection.head + txt.length;
-        selection.update(head, head);
-      }
-      if (selection.target.type === 'list') {
-        tnode = text(txt);
-        lb = listbuffer(tnode);
-        selection.target.put(selection.head, lb);
-        selection = new Selection(tnode, txt.length, txt.length);
+      switch (nodeType(selection.target)) {
+        case 'text':
+          tb = textbuffer(txt);
+          selection.target.put(selection.head, tb);
+          head = selection.head + txt.length;
+          selection.update(head, head);
+          break;
+        case 'list':
+          tnode = text(txt);
+          lb = listbuffer(tnode);
+          selection.target.put(selection.head, lb);
+          selection = new Selection(tnode, txt.length, txt.length);
       }
       return selection;
     };
@@ -280,6 +371,11 @@
     keyboardEvents(canvas, function(keyCode, text) {
       return mode(keyCode, text);
     });
+    canvas.addEventListener('mousedown', function() {
+      if (over != null) {
+        return selection = new Selection(over, over.hoverIndex, over.hoverIndex);
+      }
+    });
     draw = function() {
       bc.fillStyle = "#aaa";
       bc.fillRect(0, 0, canvas.width, canvas.height);
@@ -289,9 +385,9 @@
       model.y = 50;
       over = model.mousemotion.apply(model, mouse.point);
       model.draw(bc);
-      bc.fillText("press (h,l,w,e,b) -keys to try basic motions", 50, 10);
-      bc.fillText("(i and ESC) to enter and leave insert -mode", 50, 30);
-      bc.fillText("mode: " + mode.tag, 500, 10);
+      selection.draw(bc);
+      bc.fillStyle = "white";
+      bc.fillText("-- " + mode.tag + " --", 50, canvas.height - 10);
       return requestAnimationFrame(draw);
     };
     drawBox = function(x, y, w, h) {
@@ -304,26 +400,31 @@
   });
 
   Selection = (function() {
-    function Selection(target, head, tail) {
+    function Selection(target, head, tail, inclusive) {
       this.target = target;
       this.head = head;
       this.tail = tail;
-      this.update(this.head, this.tail);
+      this.inclusive = inclusive != null ? inclusive : false;
+      this.update(this.head, this.tail, this.inclusive);
     }
 
-    Selection.prototype.update = function(head, tail) {
+    Selection.prototype.update = function(head, tail, inclusive) {
       this.head = head;
       this.tail = tail;
+      this.inclusive = inclusive != null ? inclusive : false;
+      if (this.inclusive) {
+        this.head = Math.max(0, Math.min(this.head, this.target.length - 1));
+        this.tail = Math.max(0, Math.min(this.tail, this.target.length - 1));
+      } else {
+        this.head = Math.max(0, Math.min(this.head, this.target.length));
+        this.tail = Math.max(0, Math.min(this.tail, this.target.length));
+      }
       this.start = Math.min(this.head, this.tail);
-      return this.stop = Math.max(this.head, this.tail);
+      return this.stop = Math.max(this.head + this.inclusive, this.tail + this.inclusive);
     };
 
-    Selection.prototype.mark = function() {
-      return this.target.selection = this;
-    };
-
-    Selection.prototype.unmark = function() {
-      return this.target.selection = null;
+    Selection.prototype.draw = function(bc) {
+      return this.target.drawSelection(bc, this.start, this.stop);
     };
 
     return Selection;
@@ -342,7 +443,7 @@
     var node, start, stop, target;
     target = selection.target, start = selection.start, stop = selection.stop;
     if (target.type !== 'text' && 0 < start) {
-      node = target.list[start - 1];
+      node = target.get(start - 1);
       if (node.type === 'text') {
         return new Selection(node, node.length, node.length);
       }
@@ -354,7 +455,7 @@
     var node, start, stop, target;
     target = selection.target, start = selection.start, stop = selection.stop;
     if (target.type !== 'text' && stop < target.length) {
-      node = target.list[stop];
+      node = target.get(stop);
       if (node.type === 'text') {
         return new Selection(node, 0, 0);
       }
@@ -371,7 +472,7 @@
     }
     if (target.type === 'list') {
       if (0 < head) {
-        node = target.list[head - 1];
+        node = target.get(head - 1);
         if (node.type === 'list' || node.type === 'text') {
           return rightSelection(node);
         }
@@ -393,7 +494,7 @@
     }
     if (target.type === 'list') {
       if (head < target.length) {
-        node = target.list[head];
+        node = target.get(head);
         if (node.type === 'list' || node.type === 'text') {
           return leftSelection(node);
         }

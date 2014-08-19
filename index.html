@@ -11,5 +11,74 @@
 </head>
 <body>
     <canvas id="editor"></canvas>
+    <div id="help">
+        <p>
+            On the left side of this screen, you see a contraption called <b>lisp-editor</b>.
+            It is a visual language and an editor inspired from 
+            <a href="http://en.wikipedia.org/wiki/Lisp_(programming_language)">Lisp</a>.
+        </p>
+        <p>
+            Lisp languages are famous for their parenthesised prefix notation.
+            The notation is generic and homoiconic, meaning that it fits and can be used
+            for notating any kind of data, and that data is available for the program.
+        </p>
+        <p>
+            Although many programming languages have lisp influences.
+            Most of them prefer special purpose notation over generic and homoiconic notations
+            as it gives the reader a context.
+            Lisp's weakness and strength is the lack of that notation.
+            Occassionally it is hard to verify that a lisp program is correct because the parentheses
+            may span multiple lines and error in parenthesis can camouflage into stream of parentheses.
+            In other hand lisp is extremely easy language to learn and explain. Many lisp programming
+            environments are easy to modify for your own purpose. People call lisp
+            "a programmable programming language" for good reason.
+        </p>
+        <p>
+            This visual notation imitates lisp syntax. It replaces parentheses with boxes.
+            The internal structure of this language is a tree, and it's directly represented
+            to you inside an editor.
+        </p>
+        <p>
+            The thing left of you is in fact a functioning editor for the language.
+            Once you click on the editor screen to give it a focus, it understands vim-style
+            syntax. The editor is very bare, proof of concept. It's open source. You can fork,
+            dissect and fondle it in the <a href="https://github.com/cheery/lisp-editor/tree/gh-pages">github</a>.
+        </p>
+        <h2>Select mode operations</h2>
+        <table>
+            <tr> <td>i</td> <td>Switch to insert -mode.</td> </tr>
+            <tr> <td>v</td> <td>Switch to visual -mode.</td> </tr>
+            <tr> 
+                <td>h</td> <td>travel one tread left.</td>
+            </tr>
+            <tr> <td>(space)</td> <td>jump into the gap.</td> </tr>
+            <tr> <td>l</td> <td>travel one tread right.</td> </tr>
+            <tr> <td>w</td> <td>travel one symbol right.</td> </tr>
+            <tr> <td>e</td> <td>travel to end of the symbol</td> </tr>
+            <tr> <td>b</td> <td>travel one symbol left.</td> </tr>
+            <tr> <td>p</td> <td>paste killed/yanked buffer after.</td> </tr>
+            <tr> <td>P</td> <td>paste killed/yanked buffer before.</td> </tr>
+        </table>
+        <h2>Insert mode operations</h2>
+        <p>In this mode, you can insert symbols, but some keyboard keys have special commands.</p>
+        <table>
+            <tr> <td>(escape)</td> <td>return back to select mode</td> </tr>
+            <tr> <td>(enter)</td> <td>insert carriage node</td> </tr>
+            <tr> <td>(space)</td> <td>insert or move to gap</td> </tr>
+            <tr> <td>(backspace)</td> <td>remove character or empty node from left</td> </tr>
+            <tr> <td>(delete)</td> <td>remove character or empty node from right</td> </tr>
+            <tr> <td>(left parenthesis)</td> <td>create new box</td> </tr>
+            <tr> <td>(right parenthesis)</td> <td>move out of the box</td> </tr>
+        </table>
+        <h2>Visual mode operations</h2>
+        <p>Visual mode is for removing and moving things around.</p>
+        <table>
+            <tr> <td>v</td> <td>expand selection to cover the containing box or whole symbol</td> </tr>
+            <tr> <td>h</td> <td>expand selection left</td> </tr>
+            <tr> <td>l</td> <td>expand selection right</td> </tr>
+            <tr> <td>d</td> <td>remove selection (kill it)</td> </tr>
+            <tr> <td>y</td> <td>copy selection (yank it)</td> </tr>
+        </table>
+    </div>
 </body>
 </html>

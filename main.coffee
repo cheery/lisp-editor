@@ -16,10 +16,8 @@ window.addEventListener 'load', () ->
     mode = null
 
     selection = textright leftSelection model
-    selection.mark()
 
     insertMode = (keyCode, txt) ->
-        selection.unmark()
         if keyCode == 27
             mode = selectMode
         else if keyCode == 13
@@ -38,7 +36,6 @@ window.addEventListener 'load', () ->
             selection = delRight(selection)
         else
             console.log keyCode
-        selection.mark()
     insertMode.tag = "insert"
 
     delLeft = (selection) ->
@@ -54,7 +51,7 @@ window.addEventListener 'load', () ->
             else
                 {target: node, start, stop} = target.getRange()
                 if start > 0
-                    before = node.list[start-1]
+                    before = node.get start-1
                     if before.type == 'text'
                         textnode = text(before.text + target.text)
                         index = before.length
@@ -64,7 +61,7 @@ window.addEventListener 'load', () ->
                 return delLeft(new Selection(node, 0, 0))
         if target.type == 'list'
             if head > 0
-                before = target.list[head-1]
+                before = target.get head-1
                 if before.type == 'list'
                     return new Selection(before, before.length, before.length)
                 if before.type == 'text'
@@ -91,7 +88,7 @@ window.addEventListener 'load', () ->
             else
                 {target: node, start, stop} = target.getRange()
                 if stop < node.length
-                    ahead = node.list[stop]
+                    ahead = node.get stop
                     if ahead.type == 'text'
                         textnode = text(target.text + ahead.text)
                         index = target.length
@@ -101,7 +98,7 @@ window.addEventListener 'load', () ->
                 return delRight(new Selection(node, stop, stop))
         if target.type == 'list'
             if head < target.length
-                ahead = target.list[head]
+                ahead = target.get head
                 if ahead.type == 'list'
                     return new Selection(ahead, 0, 0)
                 if ahead.type == 'text'
@@ -116,30 +113,101 @@ window.addEventListener 'load', () ->
                 return new Selection(node, stop, stop)
         return selection
 
-    #target = model.list[0]
+    copybuffer = null
+    visualMode = (keyCode, text) ->
+        if keyCode == 27
+            mode = selectMode
+            selection.update(selection.head, selection.head, false)
+        else if text == 'h'
+            {target, head, tail, inclusive} = selection
+            if head > 0
+                selection.update(head-1, tail, inclusive)
+            else
+                {target, start} = target.getRange()
+                selection = new Selection target, start, start, true
+        else if text == 'l'
+            {target, head, tail, inclusive} = selection
+            if head < target.length - 1
+                selection.update(head+1, tail, inclusive)
+            else
+                {target, start} = target.getRange()
+                selection = new Selection target, start, start, true
+        else if text == 'v' and selection.target.parent?
+            {target, start} = selection.target.getRange()
+            selection = new Selection target, start, start, true
+        else if text == 'd'
+            {target, start, stop} = selection
+            copybuffer = target.kill(start, stop)
+            selection.update(start, start, false)
+            mode = selectMode
+        else if text == 'y'
+            {target, start, stop} = selection
+            copybuffer = target.yank(start, stop)
+            selection.update(start, start, false)
+            mode = selectMode
+
+    visualMode.tag = "visual"
+
     #target.selection = {start: 1, stop: 1}
     #model.selection = {start: 2, stop: 3}
-    selectMode = (keyCode, text) ->
-        selection.unmark()
-        if text == 'i'
+    selectMode = (keyCode, txt) ->
+        if txt == ' ' and selection.target.type == 'text'
+            if selection.head == selection.target.length
+                {target, stop} = selection.target.getRange()
+                selection = new Selection target, stop, stop
+            else if selection.head == 0
+                {target, start} = selection.target.getRange()
+                selection = new Selection target, start, start
+        if txt == 'i'
             mode = insertMode
-        if text == 'l'
+        if txt == 'l'
             selection = stepRight(selection)
-        if text == 'w'
+        if txt == 'w'
             selection = textright travelRight selection
-        if text == 'e'
+        if txt == 'e'
             if selection.target.type != 'text' or selection.head == selection.target.length
                 selection = textright travelRight selection
             if selection.target.type == 'text'
                 selection.update(selection.target.length, selection.target.length)
-        if text == 'h'
+        if txt == 'h'
             selection = stepLeft(selection)
-        if text == 'b'
+        if txt == 'b'
             if selection.target.type != 'text' or selection.head == 0
                 selection = textleft travelLeft selection
             if selection.target.type == 'text'
                 selection.update(0, 0)
-        selection.mark()
+        if txt == 'v'
+            mode = visualMode
+            selection.update(selection.head, selection.tail, true)
+        if txt == 'P' and copybuffer?
+            {target, head} = selection
+            switch nodeType(target)
+                when "text"
+                    if copybuffer.type == 'textbuffer'
+                        target.put(head, copybuffer)
+                    if copybuffer.type == 'listbuffer'
+                        {target, start} = target.getRange()
+                        target.put(start, copybuffer)
+                when "list"
+                    if copybuffer.type == 'textbuffer'
+                        buf = listbuffer(text(copybuffer.text))
+                        target.put(head, buf)
+                    if copybuffer.type == 'listbuffer'
+                        target.put(head, copybuffer)
+        if txt == 'p' and copybuffer?
+            {target, head} = selection
+            switch nodeType(target)
+                when "text"
+                    if copybuffer.type == 'textbuffer'
+                        target.put(head, copybuffer)
+                    if copybuffer.type == 'listbuffer'
+                        {target, stop} = target.getRange()
+                        target.put(stop, copybuffer)
+                when "list"
+                    if copybuffer.type == 'textbuffer'
+                        target.put(head, listbuffer(text(copybuffer.text)))
+                    if copybuffer.type == 'listbuffer'
+                        target.put(head, copybuffer)
     selectMode.tag = "select"
 
     stepLeft = (selection) ->
@@ -215,16 +283,17 @@ window.addEventListener 'load', () ->
         return selection
 
     insertCharacter = (txt) ->
-        if selection.target.type == 'text'
-            tb = textbuffer(txt)
-            selection.target.put selection.head, tb
-            head = selection.head+txt.length
-            selection.update(head, head)
-        if selection.target.type == 'list'
-            tnode = text(txt)
-            lb = listbuffer(tnode)
-            selection.target.put selection.head, lb
-            selection = new Selection(tnode, txt.length, txt.length)
+        switch nodeType(selection.target)
+            when 'text'
+                tb = textbuffer(txt)
+                selection.target.put selection.head, tb
+                head = selection.head+txt.length
+                selection.update(head, head)
+            when 'list'
+                tnode = text(txt)
+                lb = listbuffer(tnode)
+                selection.target.put selection.head, lb
+                selection = new Selection(tnode, txt.length, txt.length)
         return selection
 
     node_split = (target, index) ->
@@ -237,14 +306,9 @@ window.addEventListener 'load', () ->
     keyboardEvents canvas, (keyCode, text) ->
         mode(keyCode, text)
 
-#    canvas.addEventListener 'mousedown', () ->
-#        if over?
-#            lb = listbuffer(cr(), over)
-#            lb.link = over
-#            model.put model.length, lb
-#        else
-#            lb = listbuffer(cr(), text("LISP"))
-#            model.put model.length, lb
+    canvas.addEventListener 'mousedown', () ->
+        if over?
+            selection = new Selection over, over.hoverIndex, over.hoverIndex
 
     draw = () ->
         bc.fillStyle = "#aaa"
@@ -256,11 +320,10 @@ window.addEventListener 'load', () ->
         model.y = 50
         over = model.mousemotion(mouse.point...)
         model.draw(bc)
+        selection.draw(bc)
 
-        bc.fillText "press (h,l,w,e,b) -keys to try basic motions", 50, 10
-        bc.fillText "(i and ESC) to enter and leave insert -mode", 50, 30
-
-        bc.fillText "mode: " + mode.tag, 500, 10
+        bc.fillStyle = "white"
+        bc.fillText "-- " + mode.tag + " --", 50, canvas.height - 10
 
         requestAnimationFrame draw
 
@@ -273,18 +336,22 @@ window.addEventListener 'load', () ->
     draw()
 
 class Selection
-    constructor: (@target, @head, @tail) ->
-        @update(@head, @tail)
+    constructor: (@target, @head, @tail, @inclusive=false) ->
+        @update(@head, @tail, @inclusive)
 
-    update: (@head, @tail) ->
+    update: (@head, @tail, @inclusive=false) ->
+        if @inclusive
+            @head = Math.max(0, Math.min(@head, @target.length-1))
+            @tail = Math.max(0, Math.min(@tail, @target.length-1))
+        else
+            @head = Math.max(0, Math.min(@head, @target.length))
+            @tail = Math.max(0, Math.min(@tail, @target.length))
         @start = Math.min(@head, @tail)
-        @stop  = Math.max(@head, @tail)
+        @stop  = Math.max(@head+@inclusive, @tail+@inclusive)
 
-    mark: () ->
-        @target.selection = @
+    draw: (bc) ->
+        @target.drawSelection bc, @start, @stop
 
-    unmark: () ->
-        @target.selection = null
 
 leftSelection = (target) ->
     return new Selection(target, 0, 0)
@@ -295,14 +362,14 @@ rightSelection = (target) ->
 textleft = (selection) ->
     {target, start, stop} = selection
     if target.type != 'text' and 0 < start
-        node = target.list[start-1]
+        node = target.get start-1
         return new Selection(node, node.length, node.length) if node.type == 'text'
     return selection
 
 textright = (selection) ->
     {target, start, stop} = selection
     if target.type != 'text' and stop < target.length
-        node = target.list[stop]
+        node = target.get stop
         return new Selection(node, 0, 0) if node.type == 'text'
     return selection
 
@@ -313,7 +380,7 @@ travelLeft = (selection) ->
         return travelLeft new Selection(target, start, start)
     if target.type == 'list'
         if 0 < head
-            node = target.list[head-1]
+            node = target.get head-1
             if node.type == 'list' or node.type == 'text'
                 return rightSelection node
             return new Selection(target, head-1, head-1)
@@ -329,7 +396,7 @@ travelRight = (selection) ->
         return travelRight new Selection(target, stop, stop)
     if target.type == 'list'
         if head < target.length
-            node = target.list[head]
+            node = target.get head
             if node.type == 'list' or node.type == 'text'
                 return leftSelection node
             return new Selection(target, head+1, head+1)

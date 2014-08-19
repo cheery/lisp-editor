@@ -25,7 +25,6 @@
         item = _ref[_i];
         item.parent = this;
       }
-      this.selection = null;
     }
 
     ListNode.prototype.copy = function() {
@@ -80,6 +79,13 @@
       }
       [].splice.apply(this.list, [index, index - index].concat(list)), list;
       return this.length = this.list.length;
+    };
+
+    ListNode.prototype.get = function(index) {
+      if (!((0 <= index && index < this.length))) {
+        return null;
+      }
+      return this.list[index];
     };
 
     ListNode.prototype.getRange = function() {
@@ -203,7 +209,7 @@
     };
 
     ListNode.prototype.draw = function(bc) {
-      var item, left, right, row, _i, _j, _len, _len1, _ref, _ref1, _ref2;
+      var item, _i, _len, _ref;
       bc.fillStyle = "white";
       bc.strokeStyle = "black";
       if (this.hover) {
@@ -218,41 +224,56 @@
         item = _ref[_i];
         item.draw(bc);
       }
-      if (this.selection) {
-        bc.fillStyle = selectColor;
-        bc.globalCompositeOperation = selectCompositeOp;
-        _ref1 = this.rows;
-        for (_j = 0, _len1 = _ref1.length; _j < _len1; _j++) {
-          row = _ref1[_j];
-          if (this.selection.stop < row.start) {
-            continue;
-          }
-          if (row.stop < this.selection.start) {
-            continue;
-          }
-          if (row.start <= this.selection.start) {
-            left = row.offsets[this.selection.start - row.start] - 1;
-          } else {
-            left = 0;
-          }
-          if (this.selection.stop === this.selection.start) {
-            right = left - 2;
-            left -= padding - 4;
-          } else if (this.selection.stop === row.start) {
-            right = row.offsets[0];
-          } else if (this.selection.stop <= row.stop) {
-            right = row.offsets[this.selection.stop - row.start] - padding + 1;
-          } else {
-            right = this.width;
-          }
-          if (right < left) {
-            _ref2 = [right, left], left = _ref2[0], right = _ref2[1];
-          }
-          bc.fillRect(left, row.offset - 1, right - left, row.height + padding);
-        }
-        bc.globalCompositeOperation = "source-over";
-      }
       return bc.restore();
+    };
+
+    ListNode.prototype.getPosition = function() {
+      var x, y, _ref;
+      x = y = 0;
+      if (this.parent) {
+        _ref = this.parent.getPosition(), x = _ref.x, y = _ref.y;
+      }
+      return {
+        x: x + this.x,
+        y: y + this.y
+      };
+    };
+
+    ListNode.prototype.drawSelection = function(bc, start, stop) {
+      var left, right, row, x, y, _i, _len, _ref, _ref1, _ref2;
+      _ref = this.getPosition(), x = _ref.x, y = _ref.y;
+      bc.fillStyle = selectColor;
+      bc.globalCompositeOperation = selectCompositeOp;
+      _ref1 = this.rows;
+      for (_i = 0, _len = _ref1.length; _i < _len; _i++) {
+        row = _ref1[_i];
+        if (stop < row.start) {
+          continue;
+        }
+        if (row.stop < start) {
+          continue;
+        }
+        if (row.start <= start) {
+          left = row.offsets[start - row.start] - 1;
+        } else {
+          left = 0;
+        }
+        if (stop === start) {
+          right = left - 2;
+          left -= padding - 4;
+        } else if (stop === row.start) {
+          right = row.offsets[0];
+        } else if (stop <= row.stop) {
+          right = row.offsets[stop - row.start] - padding + 1;
+        } else {
+          right = this.width;
+        }
+        if (right < left) {
+          _ref2 = [right, left], left = _ref2[0], right = _ref2[1];
+        }
+        bc.fillRect(x + left, y + row.offset - 1, right - left, row.height + padding);
+      }
+      return bc.globalCompositeOperation = "source-over";
     };
 
     return ListNode;
@@ -267,7 +288,6 @@
       this.hover = false;
       this.length = this.text.length;
       this.offsets = [];
-      this.selection = null;
       this.hoverIndex = 0;
     }
 
@@ -344,21 +364,35 @@
     };
 
     TextNode.prototype.draw = function(bc) {
-      var left, right;
       bc.font = "16px sans-serif";
       bc.fillStyle = "black";
       if (this.hover) {
         bc.fillStyle = hoverColor;
       }
-      bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
-      if (this.selection != null) {
-        left = this.offsets[this.selection.start] - 1;
-        right = this.offsets[this.selection.stop] + 1;
-        bc.fillStyle = selectColor;
-        bc.globalCompositeOperation = selectCompositeOp;
-        bc.fillRect(this.x + left, this.y, right - left, this.height);
-        return bc.globalCompositeOperation = "source-over";
+      return bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
+    };
+
+    TextNode.prototype.getPosition = function() {
+      var x, y, _ref;
+      x = y = 0;
+      if (this.parent) {
+        _ref = this.parent.getPosition(), x = _ref.x, y = _ref.y;
       }
+      return {
+        x: x + this.x,
+        y: y + this.y
+      };
+    };
+
+    TextNode.prototype.drawSelection = function(bc, start, stop) {
+      var left, right, x, y, _ref;
+      _ref = this.getPosition(), x = _ref.x, y = _ref.y;
+      left = this.offsets[start] - 1;
+      right = this.offsets[stop] + 1;
+      bc.fillStyle = selectColor;
+      bc.globalCompositeOperation = selectCompositeOp;
+      bc.fillRect(x + left, y, right - left, this.height);
+      return bc.globalCompositeOperation = "source-over";
     };
 
     return TextNode;
@@ -436,6 +470,25 @@
 
   window.textbuffer = function(text) {
     return new TextBuffer(text, null);
+  };
+
+  window.isText = function(node) {
+    return (node != null) && node.type === 'text';
+  };
+
+  window.isList = function(node) {
+    return (node != null) && node.type === 'list';
+  };
+
+  window.isCr = function(node) {
+    return (node != null) && node.type === 'cr';
+  };
+
+  window.nodeType = function(node) {
+    if (!((node != null) && (node.type != null))) {
+      return null;
+    }
+    return node.type;
   };
 
 }).call(this);

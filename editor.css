@@ -1,8 +1,30 @@
 #editor
 {
     position: absolute;
-    width: 100%;
+    width: 50%;
     height: 100%;
     top: 0;
     left: 0;
+}
+
+#help
+{
+    position: absolute;
+    width: 50%;
+    height: 100%;
+    top: 0;
+    left: 50%;
+    overflow: auto;
+}
+
+#help > * {
+    margin: 20px;
+}
+
+#help table {
+    border: 1px solid gray;
+}
+#help table td {
+    border: 1px solid gray;
+    padding: 5px;
 }
