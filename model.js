@@ -244,7 +244,7 @@
     };
 
     ListNode.prototype.drawSelection = function(bc, start, stop) {
-      var left, right, row, x, y, _i, _len, _ref, _ref1, _ref2;
+      var left, node, right, row, x, y, _i, _len, _ref, _ref1, _ref2, _ref3;
       _ref = this.getPosition(), x = _ref.x, y = _ref.y;
       bc.fillStyle = selectColor;
       bc.globalCompositeOperation = selectCompositeOp;
@@ -276,6 +276,12 @@
           _ref2 = [right, left], left = _ref2[0], right = _ref2[1];
         }
         bc.fillRect(x + left, y + row.offset - 1, right - left, row.height + padding);
+      }
+      node = this;
+      while (node.parent != null) {
+        _ref3 = node.getPosition(), x = _ref3.x, y = _ref3.y;
+        bc.strokeRect(x, y, node.width, node.height);
+        node = node.parent;
       }
       return bc.globalCompositeOperation = "source-over";
     };
@@ -389,13 +395,19 @@
     };
 
     TextNode.prototype.drawSelection = function(bc, start, stop) {
-      var left, right, x, y, _ref;
+      var left, node, right, x, y, _ref, _ref1;
       _ref = this.getPosition(), x = _ref.x, y = _ref.y;
       left = this.offsets[start] - 1;
       right = this.offsets[stop] + 1;
       bc.fillStyle = selectColor;
       bc.globalCompositeOperation = selectCompositeOp;
       bc.fillRect(x + left, y, right - left, this.height);
+      node = this.parent;
+      while (node.parent != null) {
+        _ref1 = node.getPosition(), x = _ref1.x, y = _ref1.y;
+        bc.strokeRect(x, y, node.width, node.height);
+        node = node.parent;
+      }
       return bc.globalCompositeOperation = "source-over";
     };
 

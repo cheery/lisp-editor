@@ -133,11 +133,6 @@ class ListNode
         bc.strokeStyle = "black"
         bc.strokeStyle = hoverColor if @hover
         bc.fillRect   @x, @y, @width, @height
-#        if @parent?
-#            if @rows.length == 1
-#                bc.strokeRect @x, @y, @width, @height
-#            else
-#                bc.strokeRect @x, @y, @width, @height
         bc.save()
         bc.translate(@x, @y)
         for item in @list
@@ -174,6 +169,11 @@ class ListNode
             if right < left
                 [left, right] = [right, left]
             bc.fillRect(x+left, y+row.offset - 1, right - left, row.height + padding)
+        node = @
+        while node.parent?
+            {x, y} = node.getPosition()
+            bc.strokeRect x, y, node.width, node.height
+            node = node.parent
         bc.globalCompositeOperation = "source-over"
 
 class TextNode
@@ -247,6 +247,11 @@ class TextNode
         bc.fillStyle = selectColor
         bc.globalCompositeOperation = selectCompositeOp
         bc.fillRect(x+left, y, right - left, @height)
+        node = @parent
+        while node.parent?
+            {x, y} = node.getPosition()
+            bc.strokeRect x, y, node.width, node.height
+            node = node.parent
         bc.globalCompositeOperation = "source-over"
 
 class Carriage
