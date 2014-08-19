@@ -217,7 +217,9 @@
         bc.strokeStyle = hoverColor;
       }
       bc.fillRect(this.x, this.y, this.width, this.height);
-      bc.strokeRect(this.x, this.y, this.width, this.height);
+      if (this.parent != null) {
+        bc.strokeRect(this.x, this.y, this.width, this.height);
+      }
       bc.save();
       bc.translate(this.x, this.y);
       _ref = this.list;
