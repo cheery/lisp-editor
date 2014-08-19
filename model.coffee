@@ -133,11 +133,9 @@ class ListNode
         bc.fillRect   @x, @y, @width, @height
         if @parent?
             if @rows.length == 1
-                bc.strokeRect @x, @y+padding/2, @width, 0
-                bc.strokeRect @x, @y+@height-padding/2, @width, 0
+                bc.strokeRect @x, @y, @width, @height
             else
-                bc.strokeRect @x, @y, 0, @height
-                bc.strokeRect @x+@width, @y, 0, @height
+                bc.strokeRect @x, @y, @width, @height
         bc.save()
         bc.translate(@x, @y)
         for item in @list
