@@ -3,10 +3,10 @@
   var Selection, leftSelection, rightSelection, textleft, textright, travelLeft, travelRight;
 
   window.addEventListener('load', function() {
-    var bc, canvas, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, selectMode, selection, stepLeft, stepRight, visualMode;
+    var bc, canvas, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
-    model = list(list(text("factorial"), text("n")), cr(), labelled('cond', list(list(list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))))));
+    model = list(labelled('define', list(list(text("factorial"), text("n")), cr(), labelled('cond', list(list(list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))))))));
     mouse = mouseInput(canvas);
     window.model = model;
     over = null;
@@ -23,6 +23,8 @@
         return insertBox();
       } else if (txt === ")") {
         return outOfBox();
+      } else if (txt === ";") {
+        return relabelNode();
       } else if (txt.length > 0) {
         return insertCharacter(txt);
       } else if (keyCode === 8) {
@@ -34,6 +36,19 @@
       }
     };
     insertMode.tag = "insert";
+    relabelNode = function() {
+      var label, start, stop, target, _ref;
+      target = selection.target;
+      if (target.type === "text") {
+        label = target.text;
+        _ref = target.getRange(), target = _ref.target, start = _ref.start, stop = _ref.stop;
+        target.kill(start, stop);
+        target.label = label;
+        return selection = new Selection(target, start, start);
+      } else {
+        return target.label = null;
+      }
+    };
     delLeft = function(selection) {
       var before, head, index, node, start, stop, target, textnode, _ref, _ref1, _ref2;
       target = selection.target, head = selection.head;

@@ -4,14 +4,16 @@ window.addEventListener 'load', () ->
 
 
     model = list(
-        list(text("factorial"), text("n")), cr(),
-        labelled 'cond', list(
-            list(
-                list(text("="), text("n"), text("0")), cr(),
-                text("1"))
-            cr()
-            list(cr(),
-                list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1")))))
+        labelled 'define', list(
+            list(text("factorial"), text("n")), cr(),
+            labelled 'cond', list(
+                list(
+                    list(text("="), text("n"), text("0")), cr(),
+                    text("1"))
+                cr()
+                list(cr(),
+                    list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1")))))
+            )
         )
     )
     mouse = mouseInput(canvas)
@@ -33,6 +35,8 @@ window.addEventListener 'load', () ->
             insertBox()
         else if txt == ")"
             outOfBox()
+        else if txt == ";"
+            relabelNode()
         else if txt.length > 0
             insertCharacter(txt)
         else if keyCode == 8
@@ -42,6 +46,17 @@ window.addEventListener 'load', () ->
         else
             console.log keyCode
     insertMode.tag = "insert"
+
+    relabelNode = () ->
+        {target} = selection
+        if target.type == "text"
+            label = target.text
+            {target, start, stop} = target.getRange()
+            target.kill(start, stop)
+            target.label = label
+            selection = new Selection(target, start, start)
+        else
+            target.label = null
 
     delLeft = (selection) ->
         {target, head} = selection

@@ -5,6 +5,7 @@ window.padding = 0
 window.spacing = 4
 window.indentation = 16
 window.condStroke = "#888800"
+window.undefColor = "#cc00cc"
 
 class ListNode
     constructor: (@list) ->
@@ -82,9 +83,12 @@ class ListNode
             return null
 
     layout: (bc) ->
-        correction = 0
+        localIndent = indentation
+        headerGap = 0
         if @label == 'cond'
-            correction = -indentation
+            localIndent = 0
+        else if @label?
+            headerGap = bc.measureText(@label + ";").width + spacing
         @x = 0
         @y = 0
         @width  = 0
@@ -99,7 +103,7 @@ class ListNode
             start: 0
             stop:  0
         }
-        offset = padding
+        offset = padding + headerGap
         for item in @list
             item.layout(bc)
             if item.type == 'cr'
@@ -114,7 +118,7 @@ class ListNode
                 }
                 @width  = Math.max(offset, @width)
                 @height = Math.max(row.offset + row.height + 2*padding, @height)
-                offset = padding + indentation + correction
+                offset = padding + localIndent
             else
                 item.x = offset
                 item.y = row.offset
@@ -142,6 +146,10 @@ class ListNode
         bc.translate(@x, @y)
         for item in @list
             item.draw(bc)
+
+        if @label? and @label != 'cond'
+            bc.fillStyle = undefColor
+            bc.fillText @label+";", 0, 16/2
         bc.restore()
 
     getPosition: () ->
@@ -179,6 +187,8 @@ class ListNode
             {x, y} = node.getPosition()
             if node.label == 'cond'
                 bc.strokeStyle = condStroke
+            else if node.label?
+                bc.strokeStyle = undefColor
             bc.strokeRect x, y, node.width, node.height
             bc.strokeStyle = 'black'
             node = node.parent
@@ -260,6 +270,8 @@ class TextNode
             {x, y} = node.getPosition()
             if node.label == 'cond'
                 bc.strokeStyle = condStroke
+            else if node.label?
+                bc.strokeStyle = undefColor
             bc.strokeRect x, y, node.width, node.height
             bc.strokeStyle = 'black'
             node = node.parent

@@ -17,6 +17,8 @@
 
   window.condStroke = "#888800";
 
+  window.undefColor = "#cc00cc";
+
   ListNode = (function() {
     function ListNode(list) {
       var item, _i, _len, _ref;
@@ -155,10 +157,13 @@
     };
 
     ListNode.prototype.layout = function(bc) {
-      var correction, item, offset, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
-      correction = 0;
+      var headerGap, item, localIndent, offset, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
+      localIndent = indentation;
+      headerGap = 0;
       if (this.label === 'cond') {
-        correction = -indentation;
+        localIndent = 0;
+      } else if (this.label != null) {
+        headerGap = bc.measureText(this.label + ";").width + spacing;
       }
       this.x = 0;
       this.y = 0;
@@ -173,7 +178,7 @@
         start: 0,
         stop: 0
       });
-      offset = padding;
+      offset = padding + headerGap;
       _ref = this.list;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];
@@ -190,7 +195,7 @@
           });
           this.width = Math.max(offset, this.width);
           this.height = Math.max(row.offset + row.height + 2 * padding, this.height);
-          offset = padding + indentation + correction;
+          offset = padding + localIndent;
         } else {
           item.x = offset;
           item.y = row.offset;
@@ -234,6 +239,10 @@
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
         item = _ref[_i];
         item.draw(bc);
+      }
+      if ((this.label != null) && this.label !== 'cond') {
+        bc.fillStyle = undefColor;
+        bc.fillText(this.label + ";", 0, 16 / 2);
       }
       return bc.restore();
     };
@@ -289,6 +298,8 @@
         _ref3 = node.getPosition(), x = _ref3.x, y = _ref3.y;
         if (node.label === 'cond') {
           bc.strokeStyle = condStroke;
+        } else if (node.label != null) {
+          bc.strokeStyle = undefColor;
         }
         bc.strokeRect(x, y, node.width, node.height);
         bc.strokeStyle = 'black';
@@ -418,6 +429,8 @@
         _ref1 = node.getPosition(), x = _ref1.x, y = _ref1.y;
         if (node.label === 'cond') {
           bc.strokeStyle = condStroke;
+        } else if (node.label != null) {
+          bc.strokeStyle = undefColor;
         }
         bc.strokeRect(x, y, node.width, node.height);
         bc.strokeStyle = 'black';
