@@ -3,9 +3,11 @@
   var Selection, leftSelection, rightSelection, textleft, textright, travelLeft, travelRight;
 
   window.addEventListener('load', function() {
-    var bc, canvas, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, visualMode;
+    var bc, canvas, command, commandMode, commandSelection, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
+    command = list();
+    commandSelection = null;
     model = list(labelled('define', list(list(text("factorial"), text("n")), cr(), labelled('cond', list(list(list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))))))));
     mouse = mouseInput(canvas);
     window.model = model;
@@ -36,6 +38,25 @@
       }
     };
     insertMode.tag = "insert";
+    commandMode = function(keyCode, txt) {
+      var toplevel;
+      if (selection.target.type === 'text') {
+        toplevel = selection.target.parent.parent == null;
+      } else {
+        toplevel = selection.target.parent != null;
+      }
+      if (keyCode === 27) {
+        selection = commandSelection;
+        commandSelection = null;
+        return mode = selectMode;
+      } else if (keyCode === 13 && toplevel) {
+        selection = commandSelection;
+        commandSelection = null;
+        return mode = selectMode;
+      } else {
+        return insertMode(keyCode, txt);
+      }
+    };
     relabelNode = function() {
       var label, start, stop, target, _ref;
       target = selection.target;
@@ -186,6 +207,12 @@
     visualMode.tag = "visual";
     selectMode = function(keyCode, txt) {
       var buf, head, start, stop, target, _ref, _ref1, _ref2, _ref3;
+      if (txt === ':') {
+        commandSelection = selection;
+        command = list();
+        selection = new Selection(command, 0, 0);
+        mode = commandMode;
+      }
       if (txt === ' ' && selection.target.type === 'text') {
         if (selection.head === selection.target.length) {
           _ref = selection.target.getRange(), target = _ref.target, stop = _ref.stop;
@@ -388,7 +415,9 @@
     });
     canvas.addEventListener('mousedown', function() {
       if (over != null) {
-        return selection = new Selection(over, over.hoverIndex, over.hoverIndex);
+        selection = new Selection(over, over.hoverIndex, over.hoverIndex);
+        commandSelection = null;
+        return mode = selectMode;
       }
     });
     draw = function() {
@@ -400,11 +429,17 @@
       model.y = 50;
       over = model.mousemotion.apply(model, mouse.point);
       model.draw(bc);
-      selection.draw(bc);
-      bc.fillStyle = "white";
-      bc.fillText("-- " + mode.tag + " --", 50, canvas.height - 10);
-      bc.fillText("There is one special form here already (cond, marked in yellow),", 50, 10);
-      bc.fillText("unfortunately no insertion method for them yet.", 50, 30);
+      if (commandSelection) {
+        command.layout(bc);
+        command.x = 50;
+        command.y = canvas.height - command.height;
+        command.draw(bc);
+        selection.draw(bc);
+      } else {
+        selection.draw(bc);
+        bc.fillStyle = "white";
+        bc.fillText("-- " + mode.tag + " --", 50, canvas.height - 10);
+      }
       return requestAnimationFrame(draw);
     };
     drawBox = function(x, y, w, h) {

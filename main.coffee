@@ -2,6 +2,8 @@ window.addEventListener 'load', () ->
     canvas = autoResize document.getElementById('editor')
     bc = canvas.getContext '2d'
 
+    command = list()
+    commandSelection = null
 
     model = list(
         labelled 'define', list(
@@ -46,6 +48,22 @@ window.addEventListener 'load', () ->
         else
             console.log keyCode
     insertMode.tag = "insert"
+
+    commandMode = (keyCode, txt) ->
+        if selection.target.type == 'text'
+            toplevel = not selection.target.parent.parent?
+        else
+            toplevel = selection.target.parent?
+        if keyCode == 27
+            selection = commandSelection
+            commandSelection = null
+            mode = selectMode
+        else if keyCode == 13 and toplevel
+            selection = commandSelection
+            commandSelection = null
+            mode = selectMode
+        else
+            insertMode keyCode, txt
 
     relabelNode = () ->
         {target} = selection
@@ -171,6 +189,11 @@ window.addEventListener 'load', () ->
     #target.selection = {start: 1, stop: 1}
     #model.selection = {start: 2, stop: 3}
     selectMode = (keyCode, txt) ->
+        if txt == ':'
+            commandSelection = selection
+            command = list()
+            selection = new Selection(command, 0, 0)
+            mode = commandMode
         if txt == ' ' and selection.target.type == 'text'
             if selection.head == selection.target.length
                 {target, stop} = selection.target.getRange()
@@ -329,6 +352,8 @@ window.addEventListener 'load', () ->
     canvas.addEventListener 'mousedown', () ->
         if over?
             selection = new Selection over, over.hoverIndex, over.hoverIndex
+            commandSelection = null
+            mode = selectMode
 
     draw = () ->
         bc.fillStyle = "#aaa"
@@ -340,12 +365,20 @@ window.addEventListener 'load', () ->
         model.y = 50
         over = model.mousemotion(mouse.point...)
         model.draw(bc)
-        selection.draw(bc)
 
-        bc.fillStyle = "white"
-        bc.fillText "-- " + mode.tag + " --", 50, canvas.height - 10
-        bc.fillText "There is one special form here already (cond, marked in yellow),", 50, 10
-        bc.fillText "unfortunately no insertion method for them yet.", 50, 30
+        if commandSelection
+            command.layout(bc)
+            command.x = 50
+            command.y = canvas.height - command.height
+            command.draw(bc)
+            selection.draw(bc)
+        else
+            selection.draw(bc)
+            bc.fillStyle = "white"
+            bc.fillText "-- " + mode.tag + " --", 50, canvas.height - 10
+        #bc.fillText "There is one special form here already (cond, marked in yellow),", 50, 10
+        #bc.fillText "unfortunately no insertion method for them yet.", 50, 30
+
 
         requestAnimationFrame draw
 
