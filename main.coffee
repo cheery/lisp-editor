@@ -5,6 +5,7 @@ window.addEventListener 'load', () ->
     command = list()
     commandSelection = null
 
+    currentdoc = null
     model = list(
         labelled 'define', list(
             list(text("factorial"), text("n")), cr(),
@@ -18,13 +19,43 @@ window.addEventListener 'load', () ->
             )
         )
     )
+    selection = textright leftSelection model
+
     mouse = mouseInput(canvas)
     window.model = model
 
     over = null
     mode = null
 
-    selection = textright leftSelection model
+    loadFile = (path) ->
+        fs.load path, (doc) ->
+            currentdoc = doc
+            model = doc.node
+            selection = textright leftSelection model
+
+    fs = new LispFS () ->
+        fs.load "index", (doc) ->
+            currentdoc = doc
+            unless doc.ent?
+                doc.replace model
+                fs.store doc
+            else
+                model = doc.node
+                selection = textright leftSelection model
+
+    submitCommand = () ->
+        return if command.length < 1
+        node = command.get(0)
+        if isSymbol(node, "edit") or isSymbol(node, "e")
+            arg = command.get(1)
+            if nodeType(arg) == 'text'
+                return loadFile(arg.text)
+        if isSymbol(node, "write") or isSymbol(node, "w")
+            return fs.store(currentdoc)
+        console.log 'unrecognised command...', node
+
+    isSymbol = (node, txt) ->
+        return node.type == 'text' and node.text == txt
 
     insertMode = (keyCode, txt) ->
         if keyCode == 27
@@ -62,6 +93,7 @@ window.addEventListener 'load', () ->
             selection = commandSelection
             commandSelection = null
             mode = selectMode
+            submitCommand()
         else
             insertMode keyCode, txt
 
@@ -376,6 +408,20 @@ window.addEventListener 'load', () ->
             selection.draw(bc)
             bc.fillStyle = "white"
             bc.fillText "-- " + mode.tag + " --", 50, canvas.height - 10
+
+        if currentdoc?
+            bc.fillStyle = "white"
+            path = currentdoc.name
+            path = currentdoc.ent.fullPath if currentdoc.ent?
+            if currentdoc.isModified()
+                path += ' [+]'
+            bc.fillText path, 50, 10
+
+        bc.fillStyle = "white"
+        i = 0
+        for entry in fs.entries
+            bc.fillText entry.fullPath, canvas.width - 64, 50+i*16
+            i += 1
         #bc.fillText "There is one special form here already (cond, marked in yellow),", 50, 10
         #bc.fillText "unfortunately no insertion method for them yet.", 50, 30
 

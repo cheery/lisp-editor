@@ -7,7 +7,7 @@ window.indentation = 16
 window.condStroke = "#888800"
 window.undefColor = "#cc00cc"
 
-class ListNode
+window.ListNode = class ListNode
     constructor: (@list) ->
         @type = 'list'
         @parent = null
@@ -33,6 +33,8 @@ class ListNode
         @length = @list.length
         for item in list
             item.parent = null
+        root = @getRoot()
+        root.document.wasChanged() if root.document?
         return new ListBuffer(list, null)
 
     put: (index, buff) ->
@@ -46,6 +48,9 @@ class ListNode
             item.parent = @
         @list[index...index] = list
         @length = @list.length
+        root = @getRoot()
+        root.document.wasChanged() if root.document?
+        return null
 
     get: (index) ->
         return null unless 0 <= index < @length
@@ -56,6 +61,10 @@ class ListNode
         start = @parent.list.indexOf(@)
         stop  = start + 1
         return {target:@parent, start, stop}
+    
+    getRoot: () ->
+        return @parent.getRoot() if @parent?
+        return @
 
     mousemotion: (x, y) ->
         x -= @x
@@ -194,7 +203,7 @@ class ListNode
             node = node.parent
         bc.globalCompositeOperation = "source-over"
 
-class TextNode
+window.TextNode = class TextNode
     constructor: (@text) ->
         @type = 'text'
         @parent = null
@@ -213,12 +222,18 @@ class TextNode
         text = @text[start...stop]
         @text = @text[...start] + @text[stop...]
         @length = @text.length
+
+        root = @getRoot()
+        root.document.wasChanged() if root.document?
         return new TextBuffer(text, null)
 
     put: (index, buff) ->
         throw "buffer conflict" if buff.type != "textbuffer"
         @text = @text[...index] + buff.text + @text[index...]
         @length = @text.length
+        root = @getRoot()
+        root.document.wasChanged() if root.document?
+        return null
 
     layout: (bc) ->
         bc.font = "16px sans-serif"
@@ -235,6 +250,10 @@ class TextNode
         start = @parent.list.indexOf(@)
         stop  = start + 1
         return {target:@parent, start, stop}
+
+    getRoot: () ->
+        return @parent.getRoot() if @parent?
+        return @
 
     mousemotion: (x, y) ->
         @hover = (@x <= x < @x+@width) and (@y <= y < @y+@height)
@@ -277,12 +296,16 @@ class TextNode
             node = node.parent
         bc.globalCompositeOperation = "source-over"
 
-class Carriage
+window.Carriage = class Carriage
     constructor: (@list) ->
         @type = 'cr'
 
     copy: () ->
         return new Carriage()
+
+    getRoot: () ->
+        return @parent.getRoot() if @parent?
+        return @
 
     mousemotion: (x, y) ->
         return false
@@ -295,11 +318,11 @@ class Carriage
 
     draw: (bc) ->
 
-class ListBuffer
+window.ListBuffer = class ListBuffer
     constructor: (@list, @link) ->
         @type = "listbuffer"
 
-class TextBuffer
+window.TextBuffer = class TextBuffer
     constructor: (@text, @link) ->
         @type = "textbuffer"
 

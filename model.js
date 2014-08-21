@@ -19,7 +19,7 @@
 
   window.undefColor = "#cc00cc";
 
-  ListNode = (function() {
+  window.ListNode = ListNode = (function() {
     function ListNode(list) {
       var item, _i, _len, _ref;
       this.list = list;
@@ -52,7 +52,7 @@
     };
 
     ListNode.prototype.kill = function(start, stop) {
-      var item, list, _i, _len, _ref;
+      var item, list, root, _i, _len, _ref;
       list = this.list.slice(start, stop);
       [].splice.apply(this.list, [start, stop - start].concat(_ref = [])), _ref;
       this.length = this.list.length;
@@ -60,11 +60,15 @@
         item = list[_i];
         item.parent = null;
       }
+      root = this.getRoot();
+      if (root.document != null) {
+        root.document.wasChanged();
+      }
       return new ListBuffer(list, null);
     };
 
     ListNode.prototype.put = function(index, buff) {
-      var item, list, _i, _len;
+      var item, list, root, _i, _len;
       if (buff.type !== "listbuffer") {
         throw "buffer conflict";
       }
@@ -88,7 +92,12 @@
         item.parent = this;
       }
       [].splice.apply(this.list, [index, index - index].concat(list)), list;
-      return this.length = this.list.length;
+      this.length = this.list.length;
+      root = this.getRoot();
+      if (root.document != null) {
+        root.document.wasChanged();
+      }
+      return null;
     };
 
     ListNode.prototype.get = function(index) {
@@ -110,6 +119,13 @@
         start: start,
         stop: stop
       };
+    };
+
+    ListNode.prototype.getRoot = function() {
+      if (this.parent != null) {
+        return this.parent.getRoot();
+      }
+      return this;
     };
 
     ListNode.prototype.mousemotion = function(x, y) {
@@ -312,7 +328,7 @@
 
   })();
 
-  TextNode = (function() {
+  window.TextNode = TextNode = (function() {
     function TextNode(text) {
       this.text = text;
       this.type = 'text';
@@ -332,19 +348,29 @@
     };
 
     TextNode.prototype.kill = function(start, stop) {
-      var text;
+      var root, text;
       text = this.text.slice(start, stop);
       this.text = this.text.slice(0, start) + this.text.slice(stop);
       this.length = this.text.length;
+      root = this.getRoot();
+      if (root.document != null) {
+        root.document.wasChanged();
+      }
       return new TextBuffer(text, null);
     };
 
     TextNode.prototype.put = function(index, buff) {
+      var root;
       if (buff.type !== "textbuffer") {
         throw "buffer conflict";
       }
       this.text = this.text.slice(0, index) + buff.text + this.text.slice(index);
-      return this.length = this.text.length;
+      this.length = this.text.length;
+      root = this.getRoot();
+      if (root.document != null) {
+        root.document.wasChanged();
+      }
+      return null;
     };
 
     TextNode.prototype.layout = function(bc) {
@@ -374,6 +400,13 @@
         start: start,
         stop: stop
       };
+    };
+
+    TextNode.prototype.getRoot = function() {
+      if (this.parent != null) {
+        return this.parent.getRoot();
+      }
+      return this;
     };
 
     TextNode.prototype.mousemotion = function(x, y) {
@@ -443,7 +476,7 @@
 
   })();
 
-  Carriage = (function() {
+  window.Carriage = Carriage = (function() {
     function Carriage(list) {
       this.list = list;
       this.type = 'cr';
@@ -451,6 +484,13 @@
 
     Carriage.prototype.copy = function() {
       return new Carriage();
+    };
+
+    Carriage.prototype.getRoot = function() {
+      if (this.parent != null) {
+        return this.parent.getRoot();
+      }
+      return this;
     };
 
     Carriage.prototype.mousemotion = function(x, y) {
@@ -470,7 +510,7 @@
 
   })();
 
-  ListBuffer = (function() {
+  window.ListBuffer = ListBuffer = (function() {
     function ListBuffer(list, link) {
       this.list = list;
       this.link = link;
@@ -481,7 +521,7 @@
 
   })();
 
-  TextBuffer = (function() {
+  window.TextBuffer = TextBuffer = (function() {
     function TextBuffer(text, link) {
       this.text = text;
       this.link = link;

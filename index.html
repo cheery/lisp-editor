@@ -7,6 +7,8 @@
     <script src="misc.js"></script>
     <script src="model.js"></script>
     <script src="keyboard.js"></script>
+    <script src="fs.js"></script>
+    <script src="jsonformat.js"></script>
     <script src="main.js"></script>
 </head>
 <body>
@@ -82,6 +84,14 @@
             <tr> <td>d</td> <td>remove selection (kill it)</td> </tr>
             <tr> <td>y</td> <td>copy selection (yank it)</td> </tr>
         </table>
+        <h2>Commands</h2>
+        <p>
+            There's very early control for the filesystem in place. It stores the files in the persistent filesystem associated with the URL. Unfortunately no exporting methods are implemented yet. Here are the commands:
+        </p>
+        <ul>
+            <li>:edit pathname</li>
+            <li>:write</li>
+        </ul>
     </div>
 </body>
 </html>

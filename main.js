@@ -3,17 +3,57 @@
   var Selection, leftSelection, rightSelection, textleft, textright, travelLeft, travelRight;
 
   window.addEventListener('load', function() {
-    var bc, canvas, command, commandMode, commandSelection, copybuffer, delLeft, delRight, draw, drawBox, insertBox, insertCharacter, insertCr, insertMode, insertSpace, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, visualMode;
+    var bc, canvas, command, commandMode, commandSelection, copybuffer, currentdoc, delLeft, delRight, draw, drawBox, fs, insertBox, insertCharacter, insertCr, insertMode, insertSpace, isSymbol, loadFile, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, submitCommand, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
     command = list();
     commandSelection = null;
+    currentdoc = null;
     model = list(labelled('define', list(list(text("factorial"), text("n")), cr(), labelled('cond', list(list(list(text("="), text("n"), text("0")), cr(), text("1")), cr(), list(cr(), list(text("n"), text("*"), list(text("factorial"), list(text("n"), text("-"), text("1"))))))))));
+    selection = textright(leftSelection(model));
     mouse = mouseInput(canvas);
     window.model = model;
     over = null;
     mode = null;
-    selection = textright(leftSelection(model));
+    loadFile = function(path) {
+      return fs.load(path, function(doc) {
+        currentdoc = doc;
+        model = doc.node;
+        return selection = textright(leftSelection(model));
+      });
+    };
+    fs = new LispFS(function() {
+      return fs.load("index", function(doc) {
+        currentdoc = doc;
+        if (doc.ent == null) {
+          doc.replace(model);
+          return fs.store(doc);
+        } else {
+          model = doc.node;
+          return selection = textright(leftSelection(model));
+        }
+      });
+    });
+    submitCommand = function() {
+      var arg, node;
+      if (command.length < 1) {
+        return;
+      }
+      node = command.get(0);
+      if (isSymbol(node, "edit") || isSymbol(node, "e")) {
+        arg = command.get(1);
+        if (nodeType(arg) === 'text') {
+          return loadFile(arg.text);
+        }
+      }
+      if (isSymbol(node, "write") || isSymbol(node, "w")) {
+        return fs.store(currentdoc);
+      }
+      return console.log('unrecognised command...', node);
+    };
+    isSymbol = function(node, txt) {
+      return node.type === 'text' && node.text === txt;
+    };
     insertMode = function(keyCode, txt) {
       if (keyCode === 27) {
         return mode = selectMode;
@@ -52,7 +92,8 @@
       } else if (keyCode === 13 && toplevel) {
         selection = commandSelection;
         commandSelection = null;
-        return mode = selectMode;
+        mode = selectMode;
+        return submitCommand();
       } else {
         return insertMode(keyCode, txt);
       }
@@ -421,6 +462,7 @@
       }
     });
     draw = function() {
+      var entry, i, path, _i, _len, _ref;
       bc.fillStyle = "#aaa";
       bc.fillRect(0, 0, canvas.width, canvas.height);
       bc.textBaseline = "middle";
@@ -439,6 +481,25 @@
         selection.draw(bc);
         bc.fillStyle = "white";
         bc.fillText("-- " + mode.tag + " --", 50, canvas.height - 10);
+      }
+      if (currentdoc != null) {
+        bc.fillStyle = "white";
+        path = currentdoc.name;
+        if (currentdoc.ent != null) {
+          path = currentdoc.ent.fullPath;
+        }
+        if (currentdoc.isModified()) {
+          path += ' [+]';
+        }
+        bc.fillText(path, 50, 10);
+      }
+      bc.fillStyle = "white";
+      i = 0;
+      _ref = fs.entries;
+      for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+        entry = _ref[_i];
+        bc.fillText(entry.fullPath, canvas.width - 64, 50 + i * 16);
+        i += 1;
       }
       return requestAnimationFrame(draw);
     };
