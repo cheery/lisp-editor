@@ -1,4 +1,4 @@
-window.requestFileSystem ?= webkitRequestFileSystem
+window.requestFileSystem ?= window.webkitRequestFileSystem
 
 class window.LispFS
     constructor: (callback) ->
@@ -32,7 +32,11 @@ class window.LispFS
             readFile = (file) =>
                 reader = new FileReader()
                 reader.onload = () =>
-                    node = importJson JSON.parse reader.result
+                    try
+                        node = importJson JSON.parse reader.result
+                    catch e
+                        console.log "error at read: #{e}"
+                        node = list()
                     @documents.push doc = new Document(ent, path, node)
                     return callback doc
                 reader.readAsText(file)
@@ -42,13 +46,15 @@ class window.LispFS
     store: (doc, callback) ->
         writeToFile = (ent) =>
             ent.createWriter (writer) =>
-                writer.onwriteend = () =>
-                    doc.wasSaved()
-                    @updateList()
-                    callback() if callback?
-                data = JSON.stringify exportJson doc.node
-                blob = new Blob([data], {type:"text/plain"})
-                writer.write blob
+                writer.truncate 0
+                ent.createWriter (writer) =>
+                    writer.onwriteend = () =>
+                        doc.wasSaved()
+                        @updateList()
+                        callback() if callback?
+                    data = JSON.stringify exportJson doc.node
+                    blob = new Blob([data], {type:"text/plain"})
+                    writer.write blob
         if doc.ent?
             writeToFile doc.ent
         else

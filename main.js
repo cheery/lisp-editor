@@ -326,7 +326,7 @@
             }
             if (copybuffer.type === 'listbuffer') {
               _ref3 = target.getRange(), target = _ref3.target, stop = _ref3.stop;
-              return target.put(stop, copybuffer);
+              target.put(stop, copybuffer);
             }
             break;
           case "list":
@@ -334,9 +334,12 @@
               target.put(head, listbuffer(text(copybuffer.text)));
             }
             if (copybuffer.type === 'listbuffer') {
-              return target.put(head, copybuffer);
+              target.put(head, copybuffer);
             }
         }
+      }
+      if (txt === '%') {
+        return window.evaluateDocument(currentdoc);
       }
     };
     selectMode.tag = "select";

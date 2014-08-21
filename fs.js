@@ -3,7 +3,7 @@
   var Document;
 
   if (window.requestFileSystem == null) {
-    window.requestFileSystem = webkitRequestFileSystem;
+    window.requestFileSystem = window.webkitRequestFileSystem;
   }
 
   window.LispFS = (function() {
@@ -64,8 +64,14 @@
           var reader;
           reader = new FileReader();
           reader.onload = function() {
-            var node;
-            node = importJson(JSON.parse(reader.result));
+            var e, node;
+            try {
+              node = importJson(JSON.parse(reader.result));
+            } catch (_error) {
+              e = _error;
+              console.log("error at read: " + e);
+              node = list();
+            }
             _this.documents.push(doc = new Document(ent, path, node));
             return callback(doc);
           };
@@ -81,19 +87,22 @@
         _this = this;
       writeToFile = function(ent) {
         return ent.createWriter(function(writer) {
-          var blob, data;
-          writer.onwriteend = function() {
-            doc.wasSaved();
-            _this.updateList();
-            if (callback != null) {
-              return callback();
-            }
-          };
-          data = JSON.stringify(exportJson(doc.node));
-          blob = new Blob([data], {
-            type: "text/plain"
+          writer.truncate(0);
+          return ent.createWriter(function(writer) {
+            var blob, data;
+            writer.onwriteend = function() {
+              doc.wasSaved();
+              _this.updateList();
+              if (callback != null) {
+                return callback();
+              }
+            };
+            data = JSON.stringify(exportJson(doc.node));
+            blob = new Blob([data], {
+              type: "text/plain"
+            });
+            return writer.write(blob);
           });
-          return writer.write(blob);
         });
       };
       if (doc.ent != null) {

@@ -283,6 +283,8 @@ window.addEventListener 'load', () ->
                         target.put(head, listbuffer(text(copybuffer.text)))
                     if copybuffer.type == 'listbuffer'
                         target.put(head, copybuffer)
+        if txt == '%'
+            window.evaluateDocument(currentdoc)
     selectMode.tag = "select"
 
     stepLeft = (selection) ->
