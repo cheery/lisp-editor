@@ -40,6 +40,7 @@ compileBlock = (scope, exprs) ->
 
 compileExpr = (scope, expr) ->
     if isText(expr)
+        retrun {name:null, slot:JSON.stringify(expr.text)} if expr.label == 'string'
         return {name:null, slot:"true"} if expr.text == 'true'
         return {name:null, slot:"false"} if expr.text == 'false'
         return {name:null, slot:"null"} if expr.text == 'null'

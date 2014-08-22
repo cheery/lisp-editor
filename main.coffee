@@ -57,18 +57,23 @@ window.addEventListener 'load', () ->
     isSymbol = (node, txt) ->
         return node.type == 'text' and node.text == txt
 
+    inString = (selection) ->
+        return selection.target.type == "text" and selection.target.label == "string"
+
     insertMode = (keyCode, txt) ->
         if keyCode == 27
             mode = selectMode
-        else if keyCode == 13
+        else if keyCode == 13 and not inString(selection)
             insertCr()
-        else if txt == " "
+        else if txt == '"'
+            insertString()
+        else if txt == " " and not inString(selection)
             insertSpace()
-        else if txt == "("
+        else if txt == "(" and not inString(selection)
             insertBox()
-        else if txt == ")"
+        else if txt == ")" and not inString(selection)
             outOfBox()
-        else if txt == ";"
+        else if txt == ";" and not inString(selection)
             relabelNode()
         else if txt.length > 0
             insertCharacter(txt)
@@ -358,6 +363,20 @@ window.addEventListener 'load', () ->
         if (range = target.getRange())?
             selection = new Selection(range.target, range.stop, range.stop)
         return selection
+
+    insertString = () ->
+        switch nodeType(selection.target)
+            when 'text'
+                if selection.target.label == "string"
+                    {start, stop, target} = selection.target.getRange()
+                    selection = new Selection(target, stop, stop)
+                else
+                    labelled "string", selection.target
+            when 'list'
+                tnode = labelled "string", text("")
+                lb = listbuffer(tnode)
+                selection.target.put selection.head, lb
+                selection = new Selection(tnode, 0, 0)
 
     insertCharacter = (txt) ->
         switch nodeType(selection.target)

@@ -90,6 +90,12 @@
   compileExpr = function(scope, expr) {
     var arg, args, argvar, callee, cond, retfunc, retval, retvar, _i, _len, _ref;
     if (isText(expr)) {
+      if (expr.label === 'string') {
+        retrun({
+          name: null,
+          slot: JSON.stringify(expr.text)
+        });
+      }
       if (expr.text === 'true') {
         return {
           name: null,

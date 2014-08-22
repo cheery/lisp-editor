@@ -337,6 +337,7 @@
       this.length = this.text.length;
       this.offsets = [];
       this.hoverIndex = 0;
+      this.label = null;
     }
 
     TextNode.prototype.copy = function() {
@@ -434,7 +435,18 @@
       if (this.hover) {
         bc.fillStyle = hoverColor;
       }
-      return bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
+      if (this.label !== "string") {
+        bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
+      }
+      if (this.label === "string") {
+        bc.fillStyle = "#999900";
+        bc.strokeStyle = "#999900";
+        bc.fillText(this.text, this.x, this.y + this.height / 2, this.width);
+        return bc.strokeRect(this.x, this.y, this.width, this.height);
+      } else if (this.label != null) {
+        bc.strokeStyle = undefColor;
+        return bc.strokeRect(this.x, this.y, this.width, this.height);
+      }
     };
 
     TextNode.prototype.getPosition = function() {

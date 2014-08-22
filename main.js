@@ -3,7 +3,7 @@
   var Selection, leftSelection, rightSelection, textleft, textright, travelLeft, travelRight;
 
   window.addEventListener('load', function() {
-    var bc, canvas, command, commandMode, commandSelection, copybuffer, currentdoc, delLeft, delRight, draw, drawBox, fs, insertBox, insertCharacter, insertCr, insertMode, insertSpace, isSymbol, loadFile, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, submitCommand, visualMode;
+    var bc, canvas, command, commandMode, commandSelection, copybuffer, currentdoc, delLeft, delRight, draw, drawBox, fs, inString, insertBox, insertCharacter, insertCr, insertMode, insertSpace, insertString, isSymbol, loadFile, mode, model, mouse, node_split, outOfBox, over, relabelNode, selectMode, selection, stepLeft, stepRight, submitCommand, visualMode;
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
     command = list();
@@ -54,18 +54,23 @@
     isSymbol = function(node, txt) {
       return node.type === 'text' && node.text === txt;
     };
+    inString = function(selection) {
+      return selection.target.type === "text" && selection.target.label === "string";
+    };
     insertMode = function(keyCode, txt) {
       if (keyCode === 27) {
         return mode = selectMode;
-      } else if (keyCode === 13) {
+      } else if (keyCode === 13 && !inString(selection)) {
         return insertCr();
-      } else if (txt === " ") {
+      } else if (txt === '"') {
+        return insertString();
+      } else if (txt === " " && !inString(selection)) {
         return insertSpace();
-      } else if (txt === "(") {
+      } else if (txt === "(" && !inString(selection)) {
         return insertBox();
-      } else if (txt === ")") {
+      } else if (txt === ")" && !inString(selection)) {
         return outOfBox();
-      } else if (txt === ";") {
+      } else if (txt === ";" && !inString(selection)) {
         return relabelNode();
       } else if (txt.length > 0) {
         return insertCharacter(txt);
@@ -428,6 +433,24 @@
         selection = new Selection(range.target, range.stop, range.stop);
       }
       return selection;
+    };
+    insertString = function() {
+      var lb, start, stop, target, tnode, _ref;
+      switch (nodeType(selection.target)) {
+        case 'text':
+          if (selection.target.label === "string") {
+            _ref = selection.target.getRange(), start = _ref.start, stop = _ref.stop, target = _ref.target;
+            return selection = new Selection(target, stop, stop);
+          } else {
+            return labelled("string", selection.target);
+          }
+          break;
+        case 'list':
+          tnode = labelled("string", text(""));
+          lb = listbuffer(tnode);
+          selection.target.put(selection.head, lb);
+          return selection = new Selection(tnode, 0, 0);
+      }
     };
     insertCharacter = function(txt) {
       var head, lb, tb, tnode;

@@ -10,6 +10,7 @@ window.exportJson = (node) ->
             return {
                 type: 'text'
                 text: node.text
+                label: node.label
             }
         when 'cr'
             return {
@@ -26,7 +27,9 @@ window.importJson = (json) ->
             node.label = json.label
             return node
         when 'text'
-            return text(json.text)
+            node = text(json.text)
+            node.label = json.label if json.label?
+            return node
         when 'cr'
             return cr()
         else

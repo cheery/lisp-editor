@@ -211,6 +211,7 @@ window.TextNode = class TextNode
         @length = @text.length
         @offsets = []
         @hoverIndex = 0
+        @label = null
 
     copy: () ->
         return new TextNode(@text)
@@ -270,7 +271,15 @@ window.TextNode = class TextNode
         bc.font = "16px sans-serif"
         bc.fillStyle = "black"
         bc.fillStyle = hoverColor if @hover
-        bc.fillText @text, @x, @y+@height/2, @width
+        bc.fillText @text, @x, @y+@height/2, @width if @label!="string"
+        if @label == "string"
+            bc.fillStyle = "#999900"
+            bc.strokeStyle = "#999900"
+            bc.fillText @text, @x, @y+@height/2, @width
+            bc.strokeRect(@x, @y, @width, @height)
+        else if @label?
+            bc.strokeStyle = undefColor
+            bc.strokeRect(@x, @y, @width, @height)
 
     getPosition: () ->
         x = y = 0

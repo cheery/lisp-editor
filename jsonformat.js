@@ -21,7 +21,8 @@
       case 'text':
         return {
           type: 'text',
-          text: node.text
+          text: node.text,
+          label: node.label
         };
       case 'cr':
         return {
@@ -50,7 +51,11 @@
         node.label = json.label;
         return node;
       case 'text':
-        return text(json.text);
+        node = text(json.text);
+        if (json.label != null) {
+          node.label = json.label;
+        }
+        return node;
       case 'cr':
         return cr();
       default:
