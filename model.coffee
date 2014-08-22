@@ -94,7 +94,7 @@ window.ListNode = class ListNode
     layout: (bc) ->
         localIndent = indentation
         headerGap = 0
-        if @label == 'cond'
+        if @label == 'cond' or @parent == null
             localIndent = 0
         else if @label?
             headerGap = bc.measureText(@label + ";").width + spacing

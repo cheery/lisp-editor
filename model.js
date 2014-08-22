@@ -176,7 +176,7 @@
       var headerGap, item, localIndent, offset, row, _i, _j, _k, _len, _len1, _len2, _ref, _ref1, _ref2;
       localIndent = indentation;
       headerGap = 0;
-      if (this.label === 'cond') {
+      if (this.label === 'cond' || this.parent === null) {
         localIndent = 0;
       } else if (this.label != null) {
         headerGap = bc.measureText(this.label + ";").width + spacing;
