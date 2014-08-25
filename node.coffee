@@ -22,6 +22,7 @@ class ListNode
 
     put: (index, list, copy=true) ->
         return false unless isList(list)
+        list = list.list
         list = (node.copy() for node in list) if copy
         node.parent = @ for node in list
         @list[index...index] = list
@@ -38,8 +39,6 @@ class ListNode
     changed: () ->
         document = @getRoot().document
         document.wasChanged(@) if document?
-
-    find: (node) ->
 
 class TextNode
     constructor: (@text, @label) ->
@@ -61,9 +60,9 @@ class TextNode
         @changed()
         return newText text
 
-    put: (index, list, copy=true) ->
-        return false unless isText(list)
-        @text = @text[...index] + buff.text + @text[index...]
+    put: (index, node, copy=true) ->
+        return false unless isText(node)
+        @text = @text[...index] + node.text + @text[index...]
         @length = @text.length
         @changed()
         return true

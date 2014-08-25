@@ -74,6 +74,7 @@
       if (!isList(list)) {
         return false;
       }
+      list = list.list;
       if (copy) {
         list = (function() {
           var _i, _len, _results;
@@ -118,8 +119,6 @@
       }
     };
 
-    ListNode.prototype.find = function(node) {};
-
     return ListNode;
 
   })();
@@ -157,14 +156,14 @@
       return newText(text);
     };
 
-    TextNode.prototype.put = function(index, list, copy) {
+    TextNode.prototype.put = function(index, node, copy) {
       if (copy == null) {
         copy = true;
       }
-      if (!isText(list)) {
+      if (!isText(node)) {
         return false;
       }
-      this.text = this.text.slice(0, index) + buff.text + this.text.slice(index);
+      this.text = this.text.slice(0, index) + node.text + this.text.slice(index);
       this.length = this.text.length;
       this.changed();
       return true;
