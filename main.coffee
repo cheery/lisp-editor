@@ -159,6 +159,20 @@ window.addEventListener 'load', () ->
             cursor = flowLeft cursor
         if code == "k"
             cursor = flowRight cursor
+        if code == "w"
+            cursor = tabRight cursor
+        if code == "e"
+            if isText(cursor.node) and cursor.index < cursor.node.length
+                cursor = indexBottom cursor.node
+            else
+                cursor = tabRight cursor
+                cursor = indexBottom cursor.node if isText(cursor.node)
+        if code == "b"
+            if isText(cursor.node) and 0 < cursor.index
+                cursor = indexTop cursor.node
+            else
+                cursor = tabLeft cursor
+                cursor = indexTop cursor.node if isText(cursor.node)
         if code == "<" and cursor.node.parent?
             {node, index} = cursor
             lst = node.parent
@@ -185,18 +199,6 @@ window.addEventListener 'load', () ->
 #            command = list()
 #            selection = new Selection(command, 0, 0)
 #            mode = commandMode
-#        if txt == 'w'
-#            selection = textright travelRight selection
-#        if txt == 'e'
-#            if selection.target.type != 'text' or selection.head == selection.target.length
-#                selection = textright travelRight selection
-#            if selection.target.type == 'text'
-#                selection.update(selection.target.length, selection.target.length)
-#        if txt == 'b'
-#            if selection.target.type != 'text' or selection.head == 0
-#                selection = textleft travelLeft selection
-#            if selection.target.type == 'text'
-#                selection.update(0, 0)
 #        if txt == 'P' and copybuffer?
 #            {target, head} = selection
 #            switch nodeType(target)
@@ -228,7 +230,6 @@ window.addEventListener 'load', () ->
 #                        target.put(head, copybuffer)
 #        if txt == '%'
 #            window.evaluateDocument(currentdoc)
-#    selectMode.tag = "select"
 
     insertMode = (code) ->
         if code == 27
@@ -459,42 +460,66 @@ flowRight = (cursor) ->
             cursor = indexAfter node
     return cursor
 
+tabLeft = (cursor) ->
+    {node, index} = cursor = travelLeft cursor
+    if index == 0 and not node.parent?
+        return cursor
+    if isList(node) and node.length > 0
+        return tabLeft(cursor)
+    return cursor
+
+tabRight = (cursor) ->
+    {node, index} = cursor = travelRight cursor
+    if index == node.length and not node.parent?
+        return cursor
+    if isList(node) and node.length > 0
+        return tabRight(cursor)
+    return cursor
+
 stepLeft = (cursor) ->
     {node, index} = cursor
-    if isList(node)
-        child = node.list[index-1]
-        if isList(child) or isText(child)
-            cursor = indexBottom child
-        else if index > 0
-            cursor = {node:node, index:index-1}
-        else if node.parent?
-            cursor = indexBefore node
-    else if isText(node)
-        if index > 0
-            cursor = {node:node, index:index-1}
-        else if node.parent?
-            {node, index} = cursor = indexBefore node
-            if isList(node) and index == 0 and node.parent?
-                cursor = indexBefore node
-    return liftLeft cursor
+    if isText(node) and 0 < index
+        cursor = {node, index:index - 1}
+    else
+        cursor = travelLeft cursor
+    return cursor
 
 stepRight = (cursor) ->
     {node, index} = cursor
-    if isList(node)
-        child = node.list[index]
-        if isList(child) or isText(child)
-            cursor = indexTop child
-        else if index < node.length
-            cursor = {node:node, index:index+1}
+    if isText(node) and index < node.length
+        cursor = {node, index:index + 1}
+    else
+        cursor = travelRight cursor
+    return cursor
+
+travelLeft = (cursor) ->
+    {node, index} = cursor
+    if isText(node) and node.parent?
+        cursor = travelLeft indexBefore node
+    else if isList(node)
+        if 0 < index
+            child = node.list[index-1]
+            if isList(child) or isText(child)
+                cursor = indexBottom child
+            else
+                cursor = {node, index:index-1}
+        else if node.parent?
+            cursor = indexBefore node
+    return liftLeft cursor
+
+travelRight = (cursor) ->
+    {node, index} = cursor
+    if isText(node) and node.parent?
+        cursor = travelRight indexAfter node
+    else if isList(node)
+        if index < node.length
+            child = node.list[index]
+            if isList(child) or isText(child)
+                cursor = indexTop child
+            else
+                cursor = {node, index:index+1}
         else if node.parent?
             cursor = indexAfter node
-    else if isText(node)
-        if index < node.length
-            cursor = {node:node, index:index+1}
-        else if node.parent?
-            {node, index} = cursor = indexAfter node
-            if isList(node) and index == node.length and node.parent?
-                cursor = indexAfter node
     return liftRight cursor
 
 liftLeft = (cursor) ->
@@ -601,70 +626,3 @@ drawSelection = (bc, frame, start, stop, style) ->
 #                lb = listbuffer(tnode)
 #                selection.target.put selection.head, lb
 #                selection = new Selection(tnode, 0, 0)
-#
-#leftSelection = (target) ->
-#    return new Selection(target, 0, 0)
-#
-#rightSelection = (target) ->
-#    return new Selection(target, target.length, target.length)
-#
-#textleft = (selection) ->
-#    {target, start, stop} = selection
-#    if target.type != 'text' and 0 < start
-#        node = target.get start-1
-#        return new Selection(node, node.length, node.length) if node.type == 'text'
-#    return selection
-#
-#textright = (selection) ->
-#    {target, start, stop} = selection
-#    if target.type != 'text' and stop < target.length
-#        node = target.get stop
-#        return new Selection(node, 0, 0) if node.type == 'text'
-#    return selection
-#
-#
-#    stepLeft = (selection) ->
-#        if 0 < selection.head and selection.target.type == 'text'
-#            selection = new Selection(selection.target, selection.head-1, selection.head-1)
-#        else
-#            selection = textleft travelLeft selection
-#        return selection
-#
-#    stepRight = (selection) ->
-#        if selection.head < selection.target.length and selection.target.type == 'text'
-#            selection = new Selection(selection.target, selection.head+1, selection.head+1)
-#        else
-#            selection = textright travelRight selection
-#        return selection
-#
-#travelLeft = (selection) ->
-#    {target, head} = selection
-#    if target.type == 'text'
-#        {start, target} = target.getRange()
-#        return travelLeft new Selection(target, start, start)
-#    if target.type == 'list'
-#        if 0 < head
-#            node = target.get head-1
-#            if node.type == 'list' or node.type == 'text'
-#                return rightSelection node
-#            return new Selection(target, head-1, head-1)
-#        else if target.parent?
-#            {start, target} = target.getRange()
-#            return new Selection(target, start, start)
-#    return selection
-#
-#travelRight = (selection) ->
-#    {target, head} = selection
-#    if target.type == 'text'
-#        {stop, target} = target.getRange()
-#        return travelRight new Selection(target, stop, stop)
-#    if target.type == 'list'
-#        if head < target.length
-#            node = target.get head
-#            if node.type == 'list' or node.type == 'text'
-#                return leftSelection node
-#            return new Selection(target, head+1, head+1)
-#        else if target.parent?
-#            {stop, target} = target.getRange()
-#            return new Selection(target, stop, stop)
-#    return selection
