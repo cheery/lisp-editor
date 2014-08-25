@@ -159,7 +159,7 @@ window.addEventListener 'load', () ->
             cursor = flowLeft cursor
         if code == "k"
             cursor = flowRight cursor
-        if code == "w"
+        if code == "w" or code == 9
             cursor = tabRight cursor
         if code == "e"
             if isText(cursor.node) and cursor.index < cursor.node.length
@@ -234,8 +234,11 @@ window.addEventListener 'load', () ->
     insertMode = (code) ->
         if code == 27
             return selectMode
+
 #       else if code == ","
 #           go to nodeinsert mode
+        else if code == 9
+            cursor = tabRight cursor
         else if code == " "
             cursor = splitNode cursor
         else if code == 13

@@ -146,7 +146,7 @@
       if (code === "k") {
         cursor = flowRight(cursor);
       }
-      if (code === "w") {
+      if (code === "w" || code === 9) {
         cursor = tabRight(cursor);
       }
       if (code === "e") {
@@ -200,6 +200,8 @@
       var newlabel, node;
       if (code === 27) {
         return selectMode;
+      } else if (code === 9) {
+        cursor = tabRight(cursor);
       } else if (code === " ") {
         cursor = splitNode(cursor);
       } else if (code === 13) {
