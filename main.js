@@ -260,7 +260,7 @@
         cursor.node.put(cursor.index, newList([newMark('cr')]), false);
         cursor.index += 1;
       } else if (code === "(") {
-        cursor = splitnode(splitNode(cursor));
+        cursor = splitNode(splitNode(cursor));
         cursor.node.put(cursor.index, newList([node = newList([])]), false);
         cursor.node = node;
         cursor.index = 0;
@@ -307,7 +307,7 @@
             node: node,
             index: index - 1
           };
-        } else {
+        } else if (node.parent != null) {
           trail = cursor = indexBefore(node);
         }
       }
@@ -318,7 +318,7 @@
             node: node,
             index: index + 1
           };
-        } else {
+        } else if (node.parent != null) {
           trail = cursor = indexBefore(node);
         }
       }

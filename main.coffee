@@ -257,7 +257,7 @@ window.addEventListener 'load', () ->
             cursor.node.put cursor.index, newList([newMark('cr')]), false
             cursor.index += 1
         else if code == "("
-            cursor = splitnode splitNode cursor
+            cursor = splitNode splitNode cursor
             cursor.node.put cursor.index, newList([node=newList([])]), false
             cursor.node  = node
             cursor.index = 0
@@ -297,13 +297,13 @@ window.addEventListener 'load', () ->
             {node, index} = cursor
             if 0 < index
                 cursor = {node, index:index-1}
-            else
+            else if node.parent?
                 trail = cursor = indexBefore node
         if code == "l" or code == "k"
             {node, index} = cursor
             if index < node.length - 1
                 cursor = {node, index:index+1}
-            else
+            else if node.parent?
                 trail = cursor = indexBefore node
         if code == "v" and cursor.node.parent?
             trail = cursor = indexBefore cursor.node
