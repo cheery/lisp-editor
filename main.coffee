@@ -43,12 +43,14 @@ addFrame = (container, node) ->
                 row.push newDeco("else", labelStyle)
                 for subitem in item.list
                     addFrame row, subitem
-            else
+            else if isList(item)
                 row = newFrame item, defaultStyle
                 row.push newDeco("else", labelStyle) unless first
                 row.push newDeco("if", labelStyle)
                 for subitem in item.list
                     addFrame row, subitem
+            else
+                addFrame frame, item
             frame.push row
             first = false
     else if isList(node, 'infix')
@@ -92,6 +94,7 @@ window.addEventListener 'load', () ->
                 newText("x")
             ], 'infix')
         ], 'define')
+        newMark('cr')
         newList([
             newList([
                 newText("factorial")
@@ -136,21 +139,77 @@ window.addEventListener 'load', () ->
         ], 'define')
     ])
 
+    copybuffer = null
+
     cursor = liftRight {index:0, node:root}
-    
+    trail  = null
 
     frame = null
 
     canvas.addEventListener 'click', (ev) ->
         ev.preventDefault()
+        mode = modeReset()
         if (near = frame.nearest(mouse.point...))?
             cursor = {index:near.index, node:near.frame.node}
 
+    modeReset = () ->
+        trail = null
+        return selectMode
+
     selectMode = (code) ->
+        if code == 27
+            return modeReset()
         if code == "i"
             return insertMode
         if code == "v"
+            trail = cursor
+            trail.index -= 1 if trail.index == trail.node.length
             return visualMode
+        modeMotion(code)
+        if code == "<" and cursor.node.parent?
+            shifting = cursor.node
+            dst = travelLeft deleteUnder indexBefore shifting
+            if isText(dst.node)
+                dst = indexBefore dst.node
+            dst.node.put dst.index, newList([shifting]), false
+        if code == ">" and cursor.node.parent?
+            shifting = cursor.node
+            dst = travelRight deleteUnder indexBefore shifting
+            if isText(dst.node)
+                dst = indexAfter dst.node
+            dst.node.put dst.index, newList([shifting]), false
+        if code == " " and isText(cursor.node)
+            if cursor.index == 0
+                cursor = indexBefore cursor.node
+            if cursor.index == cursor.node.length
+                cursor = indexAfter cursor.node
+        if code == "p" and copybuffer?
+            if isText(cursor.node) and isList(copybuffer)
+                cursor = splitNode splitNode cursor
+            if isList(cursor.node) and isText(copybuffer)
+                cursor.node.put cursor.index, newList([copybuffer])
+                cursor.index += 1
+            else
+                cursor.node.put cursor.index, copybuffer
+                cursor.index += copybuffer.length
+        if code == "x" and cursor.index < cursor.node.length
+            deleteUnder cursor
+            if isText(cursor.node) and cursor.node.length == 0 and cursor.node.parent?
+                cursor = deleteUnder indexBefore cursor.node
+        if code == "X"
+            {node, index} = cursor
+            if isText(node) and node.parent?
+                node = node.parent
+            if node.parent?
+                bulldoze = indexBefore node
+                deleteUnder bulldoze
+                bulldoze.node.put bulldoze.index, node, false
+                if cursor.node == node
+                    cursor.index += bulldoze.index
+        return selectMode
+    selectMode.tag = "select"
+
+    modeMotion = (code) ->
         if code == "h"
             cursor = stepLeft cursor
         if code == "l"
@@ -173,25 +232,6 @@ window.addEventListener 'load', () ->
             else
                 cursor = tabLeft cursor
                 cursor = indexTop cursor.node if isText(cursor.node)
-        if code == "<" and cursor.node.parent?
-            {node, index} = cursor
-            lst = node.parent
-            index = lst.indexOf node
-            if index > 0
-                lst.put(index-1, lst.kill(index, index+1), false)
-        if code == ">" and cursor.node.parent?
-            {node, index} = cursor
-            lst = node.parent
-            index = lst.indexOf node
-            if index < lst.length - 1
-                lst.put(index+1, lst.kill(index, index+1), false)
-        if code == " " and isText(cursor.node)
-            if cursor.index == 0
-                cursor = indexBefore cursor.node
-            if cursor.index == cursor.node.length
-                cursor = indexAfter cursor.node
-        return selectMode
-    selectMode.tag = "select"
 
 #    selectMode = (keyCode, txt) ->
 #        if txt == ':'
@@ -199,41 +239,12 @@ window.addEventListener 'load', () ->
 #            command = list()
 #            selection = new Selection(command, 0, 0)
 #            mode = commandMode
-#        if txt == 'P' and copybuffer?
-#            {target, head} = selection
-#            switch nodeType(target)
-#                when "text"
-#                    if copybuffer.type == 'textbuffer'
-#                        target.put(head, copybuffer)
-#                    if copybuffer.type == 'listbuffer'
-#                        {target, start} = target.getRange()
-#                        target.put(start, copybuffer)
-#                when "list"
-#                    if copybuffer.type == 'textbuffer'
-#                        buf = listbuffer(text(copybuffer.text))
-#                        target.put(head, buf)
-#                    if copybuffer.type == 'listbuffer'
-#                        target.put(head, copybuffer)
-#        if txt == 'p' and copybuffer?
-#            {target, head} = selection
-#            switch nodeType(target)
-#                when "text"
-#                    if copybuffer.type == 'textbuffer'
-#                        target.put(head, copybuffer)
-#                    if copybuffer.type == 'listbuffer'
-#                        {target, stop} = target.getRange()
-#                        target.put(stop, copybuffer)
-#                when "list"
-#                    if copybuffer.type == 'textbuffer'
-#                        target.put(head, listbuffer(text(copybuffer.text)))
-#                    if copybuffer.type == 'listbuffer'
-#                        target.put(head, copybuffer)
 #        if txt == '%'
 #            window.evaluateDocument(currentdoc)
 
     insertMode = (code) ->
         if code == 27
-            return selectMode
+            return modeReset()
 
 #       else if code == ","
 #           go to nodeinsert mode
@@ -281,39 +292,51 @@ window.addEventListener 'load', () ->
 
     visualMode = (code) ->
         if code == 27
-            return selectMode
+            return modeReset()
+        if code == "h" or code == "j"
+            {node, index} = cursor
+            if 0 < index
+                cursor = {node, index:index-1}
+            else
+                trail = cursor = indexBefore node
+        if code == "l" or code == "k"
+            {node, index} = cursor
+            if index < node.length - 1
+                cursor = {node, index:index+1}
+            else
+                trail = cursor = indexBefore node
+        if code == "v" and cursor.node.parent?
+            trail = cursor = indexBefore cursor.node
+        if code == "d" and trail.node == cursor.node
+            {start, stop} = selectionRange trail, cursor
+            copybuffer = cursor.node.kill(start, stop)
+            return modeReset()
+        if code == "y" and trail.node == cursor.node
+            {start, stop} = selectionRange trail, cursor
+            copybuffer = cursor.node.yank(start, stop)
+            return modeReset()
+        if code == "<" and trail.node == cursor.node and isList(cursor.node)
+            {start, stop} = selectionRange trail, cursor
+            block = cursor.node.kill(start, stop)
+            dst = flowLeft {node:cursor.node, index:start}
+            if isText(dst.node)
+                dst = indexBefore dst.node
+            dst.node.put dst.index, block, false
+            cursor = {node:dst.node, index: dst.index + cursor.index - start}
+            trail  = {node:dst.node, index: dst.index + trail.index  - start}
+        if code == ">" and trail.node == cursor.node and isList(cursor.node)
+            {start, stop} = selectionRange trail, cursor
+            block = cursor.node.kill(start, stop)
+            dst = flowRight {node:cursor.node, index:start}
+            if isText(dst.node)
+                dst = indexAfter dst.node
+            dst.node.put dst.index, block, false
+            cursor = {node:dst.node, index: dst.index + cursor.index - start}
+            trail  = {node:dst.node, index: dst.index + trail.index  - start}
 #       else if code == ","
 #           go to nodeinsert mode
         return mode
     visualMode.tag = "visual"
-#        else if text == 'h'
-#            {target, head, tail, inclusive} = selection
-#            if head > 0
-#                selection.update(head-1, tail, inclusive)
-#            else
-#                {target, start} = target.getRange()
-#                selection = new Selection target, start, start, true
-#        else if text == 'l'
-#            {target, head, tail, inclusive} = selection
-#            if head < target.length - 1
-#                selection.update(head+1, tail, inclusive)
-#            else
-#                {target, start} = target.getRange()
-#                selection = new Selection target, start, start, true
-#        else if text == 'v' and selection.target.parent?
-#            {target, start} = selection.target.getRange()
-#            selection = new Selection target, start, start, true
-#        else if text == 'd'
-#            {target, start, stop} = selection
-#            copybuffer = target.kill(start, stop)
-#            selection.update(start, start, false)
-#            mode = selectMode
-#        else if text == 'y'
-#            {target, start, stop} = selection
-#            copybuffer = target.yank(start, stop)
-#            selection.update(start, start, false)
-#            mode = selectMode
-#    visualMode.tag = "visual"
 
     mode = selectMode
     keyboardEvents canvas, (keyCode, text) ->
@@ -329,11 +352,8 @@ window.addEventListener 'load', () ->
             indent: 0
             verticalSpacing: 25
         }
-        first = true
         for node in frame.node.list
-            frame.newline() unless first
             addFrame(frame, node)
-            first = false
         frame.layout(bc)
         frame.x = 50
         frame.y = 50
@@ -342,7 +362,11 @@ window.addEventListener 'load', () ->
         if (near = frame.nearest(mouse.point...))?
             drawSelection(bc, near.frame, near.index, near.index, "black")
 
-        if cursor?
+        if cursor? and trail? and cursor.node == trail.node
+            if (cframe = frame.find cursor.node)?
+                {start, stop} = selectionRange trail, cursor
+                drawSelection(bc, cframe, start, stop, "blue")
+        else if cursor?
             cframe = frame.find cursor.node
             if cframe?
                 drawSelection(bc, cframe, cursor.index, cursor.index, "blue")
@@ -552,6 +576,10 @@ indexAfter = (node) ->
     return {node:node.parent, index:node.parent.indexOf(node)+1}
 
 
+selectionRange = (trail, cursor) ->
+    start = Math.min(trail.index, cursor.index)
+    stop  = Math.max(trail.index+1, cursor.index+1)
+    return {start, stop}
 
 drawSelection = (bc, frame, start, stop, style) ->
     bc.globalAlpha = 0.1
