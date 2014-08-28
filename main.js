@@ -108,11 +108,39 @@
   };
 
   window.addEventListener('load', function() {
-    var bc, canvas, copybuffer, cursor, draw, frame, insertMode, mode, modeMotion, modeReset, mouse, root, selectMode, trail, visualMode;
+    var bc, canvas, copybuffer, cursor, draw, editor, frame, fs, help, insertMode, mode, modeMotion, modeReset, mouse, path, root, selectMode, trail, visualMode;
+    fs = null;
+    path = "index.json";
+    root = newList([]);
+    if ((typeof chrome !== "undefined" && chrome !== null) && (chrome.fileSystem != null)) {
+      help = document.getElementById("help");
+      help.style.display = "none";
+      editor = document.getElementById("editor");
+      editor.style.width = "100%";
+      chrome.fileSystem.chooseEntry({
+        type: 'openDirectory',
+        accepts: [
+          {
+            extensions: ['html']
+          }
+        ]
+      }, function(root) {
+        if (root == null) {
+          window.close();
+        }
+        fs = new EditorFileSystem(root);
+        return fs.open(path, function(node) {
+          if (node == null) {
+            node = newList([]);
+          }
+          return root = node;
+        });
+      });
+    }
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
     mouse = mouseInput(canvas);
-    root = newList([newList([newList([newText("square"), newText("x")]), newMark('cr'), newList([newText("x"), newText("*"), newText("x")], 'infix')], 'define'), newMark('cr'), newList([newList([newText("factorial"), newText("n")]), newMark('cr'), newList([newList([newList([newText("n"), newText("="), newText("1", "int")], 'infix'), newMark("cr"), newText("1", "int")]), newList([newList([newText("n"), newText("="), newText("0", "int")], 'infix'), newMark("cr"), newText("1", "int")]), newList([newMark("cr"), newList([newText("n"), newText("*"), newList([newText("factorial"), newList([newText("n"), newText("-"), newText("1", "int")], 'infix')])], 'infix')], 'else')], 'cond')], 'define')]);
+    root = newList([newList([newList([newText("square")(newText("x"))])(newMark('cr')(newList([newText("x")(newText("*")(newText("x")))], 'infix')))], 'define')(newMark('cr')(newList([newList([newText("factorial")(newText("n"))])(newMark('cr')(newList([newList([newList([newText("n")(newText("=")(newText("1", "int")))], 'infix')(newMark("cr")(newText("1", "int")))])(newList([newList([newText("n")(newText("=")(newText("0", "int")))], 'infix')(newMark("cr")(newText("1", "int")))])(newList([newMark("cr")(newList([newText("n")(newText("*")(newList([newText("factorial")(newList([newText("n")(newText("-")(newText("1", "int")))], 'infix'))])))], 'infix'))], 'else')))], 'cond')))], 'define')))]);
     copybuffer = null;
     cursor = liftRight({
       index: 0,
@@ -419,7 +447,7 @@
       bc.fillStyle = 'black';
       bc.fillRect(0, 0, canvas.width, 16);
       bc.fillStyle = 'white';
-      bc.fillText(" index [] ", 0, 11);
+      bc.fillText(" " + path, 0, 11);
       bc.fillStyle = 'black';
       bc.fillText(" Some commands in the help are missing due to an update.", 0, 30);
       bc.fillRect(0, canvas.height - 16, canvas.width, 16);

@@ -77,67 +77,31 @@ addFrame = (container, node) ->
     return null
 
 window.addEventListener 'load', () ->
+    fs = null
+    path = "index.json"
+    root = newList([])
+
+    if chrome? and chrome.fileSystem?
+        help = document.getElementById("help")
+        help.style.display = "none"
+        editor = document.getElementById("editor")
+        editor.style.width = "100%"
+
+        chrome.fileSystem.chooseEntry {
+            type: 'openDirectory'
+            accepts: [extensions: ['html']]
+        }, (root) ->
+            window.close() unless root?
+            fs = new EditorFileSystem(root)
+            fs.open path, (node) ->
+                node = newList([]) unless node?
+                root = node
+
     canvas = autoResize document.getElementById('editor')
     bc = canvas.getContext '2d'
     mouse = mouseInput(canvas)
 
-    root = newList([
-        newList([
-            newList([
-                newText("square")
-                newText("x")
-            ])
-            newMark('cr')
-            newList([
-                newText("x")
-                newText("*")
-                newText("x")
-            ], 'infix')
-        ], 'define')
-        newMark('cr')
-        newList([
-            newList([
-                newText("factorial")
-                newText("n")
-            ])
-            newMark('cr')
-            newList([
-                newList([
-                    newList([
-                        newText("n")
-                        newText("=")
-                        newText("1", "int")
-                    ], 'infix')
-                    newMark("cr")
-                    newText("1", "int")
-                ])
-                newList([
-                    newList([
-                        newText("n")
-                        newText("=")
-                        newText("0", "int")
-                    ], 'infix')
-                    newMark("cr")
-                    newText("1", "int")
-                ])
-                newList([
-                    newMark("cr")
-                    newList([
-                        newText("n")
-                        newText("*")
-                        newList([
-                            newText("factorial")
-                            newList([
-                                newText("n")
-                                newText("-")
-                                newText("1", "int")
-                            ], 'infix')
-                        ])
-                    ], 'infix')
-                ], 'else')
-            ], 'cond')
-        ], 'define')
-    ])
+    root = newList([ newList([ newList([ newText("square") newText("x") ]) newMark('cr') newList([ newText("x") newText("*") newText("x") ], 'infix') ], 'define') newMark('cr') newList([ newList([ newText("factorial") newText("n") ]) newMark('cr') newList([ newList([ newList([ newText("n") newText("=") newText("1", "int") ], 'infix') newMark("cr") newText("1", "int") ]) newList([ newList([ newText("n") newText("=") newText("0", "int") ], 'infix') newMark("cr") newText("1", "int") ]) newList([ newMark("cr") newList([ newText("n") newText("*") newList([ newText("factorial") newList([ newText("n") newText("-") newText("1", "int") ], 'infix') ]) ], 'infix') ], 'else') ], 'cond') ], 'define') ])
 
     copybuffer = null
 
@@ -375,7 +339,7 @@ window.addEventListener 'load', () ->
         bc.fillStyle = 'black'
         bc.fillRect(0, 0, canvas.width, 16)
         bc.fillStyle = 'white'
-        bc.fillText " index [] ", 0, 11
+        bc.fillText " #{path}", 0, 11
 
         bc.fillStyle = 'black'
         bc.fillText " Some commands in the help are missing due to an update.", 0, 30
@@ -641,8 +605,6 @@ drawSelection = (bc, frame, start, stop, style) ->
 #            submitCommand()
 #        else
 #            insertMode keyCode, txt
-#
-#    copybuffer = null
 #
 #    insertString = () ->
 #        switch nodeType(selection.target)
