@@ -1,36 +1,34 @@
 window.exportJson = (node) ->
-    switch node.type
-        when 'list'
-            return {
-                type: 'list'
-                label: node.label
-                list:(exportJson a for a in node.list)
-            }
-        when 'text'
-            return {
-                type: 'text'
-                text: node.text
-                label: node.label
-            }
-        when 'cr'
-            return {
-                type: 'cr'
-            }
-        else
-            throw "unimplemented node at json export"
+    if isList(node)
+        return {
+            type: 'list'
+            label: node.label
+            list:(exportJson a for a in node.list)
+        }
+    if isText(node)
+        return {
+            type: 'text'
+            text: node.text
+            label: node.label
+        }
+    if isMark(node)
+        return {
+            type: 'mark'
+            label: node.label
+        }
+    throw "unimplemented node at json export"
 
 window.importJson = (json) ->
     switch json.type
         when 'list'
             list = (importJson a for a in json.list)
-            node = new ListNode(list)
-            node.label = json.label
+            node = newList(list, json.label)
             return node
         when 'text'
-            node = text(json.text)
-            node.label = json.label if json.label?
+            node = newText(json.text, json.label)
             return node
-        when 'cr'
-            return cr()
+        when 'mark'
+            node = newMark(json.label)
+            return node
         else
             throw "unimplemented node at json import"

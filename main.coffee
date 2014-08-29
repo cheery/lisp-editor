@@ -80,6 +80,11 @@ window.addEventListener 'load', () ->
     fs = null
     path = "index.json"
     root = newList([])
+    command_root = null#newList([])
+    cursor = liftRight {index:0, node:root}
+    copybuffer = null
+    trail  = null
+    frame = null
 
     if chrome? and chrome.fileSystem?
         help = document.getElementById("help")
@@ -87,28 +92,35 @@ window.addEventListener 'load', () ->
         editor = document.getElementById("editor")
         editor.style.width = "100%"
 
-        chrome.fileSystem.chooseEntry {
-            type: 'openDirectory'
-            accepts: [extensions: ['html']]
-        }, (root) ->
-            window.close() unless root?
-            fs = new EditorFileSystem(root)
+        boot_filesystem = (fs_root) ->
+            fs = new EditorFileSystem(fs_root)
             fs.open path, (node) ->
                 node = newList([]) unless node?
                 root = node
+                cursor = liftRight {index:0, node:root}
+
+        filesystem_must_open = () ->
+            chrome.fileSystem.chooseEntry {
+                type: 'openDirectory'
+                accepts: [extensions: ['html']]
+            }, (root) ->
+                window.close() unless root?
+                chrome.storage.local.set project_directory: chrome.fileSystem.retainEntry root
+                boot_filesystem(root)
+
+        chrome.storage.local.get "project_directory", ({project_directory}) ->
+            if project_directory?
+                chrome.fileSystem.restoreEntry project_directory, (root) ->
+                    filesystem_must_open() unless root?
+                    boot_filesystem(root)
+            else
+                filesystem_must_open()
 
     canvas = autoResize document.getElementById('editor')
     bc = canvas.getContext '2d'
     mouse = mouseInput(canvas)
 
-    root = newList([ newList([ newList([ newText("square") newText("x") ]) newMark('cr') newList([ newText("x") newText("*") newText("x") ], 'infix') ], 'define') newMark('cr') newList([ newList([ newText("factorial") newText("n") ]) newMark('cr') newList([ newList([ newList([ newText("n") newText("=") newText("1", "int") ], 'infix') newMark("cr") newText("1", "int") ]) newList([ newList([ newText("n") newText("=") newText("0", "int") ], 'infix') newMark("cr") newText("1", "int") ]) newList([ newMark("cr") newList([ newText("n") newText("*") newList([ newText("factorial") newList([ newText("n") newText("-") newText("1", "int") ], 'infix') ]) ], 'infix') ], 'else') ], 'cond') ], 'define') ])
-
-    copybuffer = null
-
-    cursor = liftRight {index:0, node:root}
-    trail  = null
-
-    frame = null
+    #root = newList([ newList([ newList([ newText("square"), newText("x") ]), newMark('cr'), newList([ newText("x"), newText("*"), newText("x") ], 'infix') ], 'define'), newMark('cr'), newList([ newList([ newText("factorial"), newText("n") ]), newMark('cr'), newList([ newList([ newList([ newText("n"), newText("="), newText("1", "int") ], 'infix'), newMark("cr"), newText("1", "int") ]) newList([ newList([ newText("n"), newText("="), newText("0", "int") ], 'infix'), newMark("cr"), newText("1", "int") ]), newList([ newMark("cr"), newList([ newText("n"), newText("*"), newList([ newText("factorial"), newList([ newText("n"), newText("-"), newText("1", "int") ], 'infix') ]) ], 'infix') ], 'else') ], 'cond') ], 'define') ])
 
     canvas.addEventListener 'click', (ev) ->
         ev.preventDefault()
@@ -118,12 +130,17 @@ window.addEventListener 'load', () ->
 
     modeReset = () ->
         trail = null
+        command_root = null
         return selectMode
 
     selectMode = (code) ->
         if code == 27
             return modeReset()
         if code == "i"
+            return insertMode
+        if code == ":"
+            command_root = newList([])
+            cursor  = {node:command_root, index:0}
             return insertMode
         if code == "v"
             trail = cursor
@@ -173,6 +190,9 @@ window.addEventListener 'load', () ->
         return selectMode
     selectMode.tag = "select"
 
+#        if txt == '%'
+#            window.evaluateDocument(currentdoc)
+
     modeMotion = (code) ->
         if code == "h"
             cursor = stepLeft cursor
@@ -197,19 +217,12 @@ window.addEventListener 'load', () ->
                 cursor = tabLeft cursor
                 cursor = indexTop cursor.node if isText(cursor.node)
 
-#    selectMode = (keyCode, txt) ->
-#        if txt == ':'
-#            commandSelection = selection
-#            command = list()
-#            selection = new Selection(command, 0, 0)
-#            mode = commandMode
-#        if txt == '%'
-#            window.evaluateDocument(currentdoc)
-
     insertMode = (code) ->
         if code == 27
             return modeReset()
-
+        else if code == 13 and outerList(cursor).node == command_root
+            submitCommand(command_root)
+            return modeReset()
 #       else if code == ","
 #           go to nodeinsert mode
         else if code == 9
@@ -253,6 +266,34 @@ window.addEventListener 'load', () ->
                 cursor.index = 1
         return insertMode
     insertMode.tag = "insert"
+
+    submitCommand = (node) ->
+        return if node.length < 1 or not isList(node)
+        head = node.list[0]
+        if isSymbol(head, "edit") or isSymbol(head, "e")
+            arg = node.list[1]
+            if isText(arg)
+                return loadFile(arg.text)
+        if isSymbol(head, "write") or isSymbol(head, "w")
+            return storeFile()
+        if isSymbol(head, "directory")
+            return filesystem_must_open()
+        console.log 'unrecognised command', head
+
+    loadFile = (npath) ->
+        fs.open npath, (node) ->
+            path = npath
+            node = newList([]) unless node?
+            root = node
+            cursor = liftRight {index:0, node:root}
+
+    storeFile = () ->
+        fs.save path, root, (success) ->
+            console.log "write failed" unless success
+            console.log "write success"
+
+    isSymbol = (node, text) ->
+        return isText(node) and node.text == text
 
     visualMode = (code) ->
         if code == 27
@@ -307,21 +348,33 @@ window.addEventListener 'load', () ->
         code = if text == "" then keyCode else text
         mode = mode(code)
 
+    buildFrame = (root) ->
+        aframe = newFrame root, buildStyle defaultStyle, {
+            indent: 0
+            verticalSpacing: 25
+        }
+        for node in aframe.node.list
+            addFrame(aframe, node)
+        aframe.layout(bc)
+        return aframe
 
     draw = () ->
         bc.fillStyle = "#ccc"
         bc.fillRect(0, 0, canvas.width, canvas.height)
 
-        frame = newFrame root, buildStyle defaultStyle, {
-            indent: 0
-            verticalSpacing: 25
-        }
-        for node in frame.node.list
-            addFrame(frame, node)
-        frame.layout(bc)
+        frame = buildFrame(root)
         frame.x = 50
         frame.y = 50
         frame.paint(bc)
+
+        comm_frame = null
+        if command_root?
+            comm_frame = buildFrame(command_root)
+            comm_frame.x = 50
+            comm_frame.y = canvas.height - comm_frame.height - 16
+            bc.fillStyle = "#aaa"
+            bc.fillRect(0, comm_frame.y, canvas.width, comm_frame.height)
+            comm_frame.paint(bc)
 
         if (near = frame.nearest(mouse.point...))?
             drawSelection(bc, near.frame, near.index, near.index, "black")
@@ -334,6 +387,11 @@ window.addEventListener 'load', () ->
             cframe = frame.find cursor.node
             if cframe?
                 drawSelection(bc, cframe, cursor.index, cursor.index, "blue")
+            if comm_frame?
+                cframe = comm_frame.find cursor.node
+                if cframe?
+                    drawSelection(bc, cframe, cursor.index, cursor.index, "blue")
+
 
         bc.font = "12px sans-serif"
         bc.fillStyle = 'black'
@@ -350,6 +408,10 @@ window.addEventListener 'load', () ->
 
         requestAnimationFrame draw
     draw()
+
+outerList = (cursor) ->
+    cursor = indexBefore(cursor.node) if isText(cursor.node)
+    return cursor
 
 deleteUnder = (cursor) ->
     cursor.node.kill cursor.index, cursor.index+1
@@ -559,52 +621,8 @@ drawSelection = (bc, frame, start, stop, style) ->
     frame.paintSelection(bc, start, stop)
     bc.globalAlpha = 1.0
 
-#    loadFile = (path) ->
-#        fs.load path, (doc) ->
-#            currentdoc = doc
-#            model = doc.node
-#            selection = textright leftSelection model
-#
-#    fs = new LispFS () ->
-#        fs.load "index", (doc) ->
-#            currentdoc = doc
-#            unless doc.ent?
-#                doc.replace model
-#                fs.store doc
-#            else
-#                model = doc.node
-#                selection = textright leftSelection model
-#
-#    submitCommand = () ->
-#        return if command.length < 1
-#        node = command.get(0)
-#        if isSymbol(node, "edit") or isSymbol(node, "e")
-#            arg = command.get(1)
-#            if nodeType(arg) == 'text'
-#                return loadFile(arg.text)
-#        if isSymbol(node, "write") or isSymbol(node, "w")
-#            return fs.store(currentdoc)
-#        console.log 'unrecognised command...', node
-#
 #    inString = (selection) ->
 #        return selection.target.type == "text" and selection.target.label == "string"
-#
-#    commandMode = (keyCode, txt) ->
-#        if selection.target.type == 'text'
-#            toplevel = not selection.target.parent.parent?
-#        else
-#            toplevel = selection.target.parent?
-#        if keyCode == 27
-#            selection = commandSelection
-#            commandSelection = null
-#            mode = selectMode
-#        else if keyCode == 13 and toplevel
-#            selection = commandSelection
-#            commandSelection = null
-#            mode = selectMode
-#            submitCommand()
-#        else
-#            insertMode keyCode, txt
 #
 #    insertString = () ->
 #        switch nodeType(selection.target)

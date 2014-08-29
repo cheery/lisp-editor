@@ -36,25 +36,46 @@
     };
 
     EditorFileSystem.prototype.save = function(path, node, callback) {
-      var failure, write,
-        _this = this;
+      var failure, write;
       failure = function(error) {
-        return callback(false, null);
+        if (callback != null) {
+          return callback(false, null);
+        }
       };
       write = function(entry) {
         return entry.createWriter(function(writer) {
-          writer.truncate(0);
-          return entry.createWriter(function(writer) {
-            var blob, data;
+          var blob, data, err, json, trunc;
+          try {
+            trunc = false;
             writer.onwriteend = function() {
-              return callback(true);
+              if (!trunc) {
+                trunc = true;
+                writer.truncate(this.position);
+                return;
+              }
+              if (callback != null) {
+                return callback(true);
+              }
             };
-            data = JSON.stringify(exportJson(node));
+            writer.onerror = function(e) {
+              console.log("write fail", e);
+              if (callback != null) {
+                return callback(false);
+              }
+            };
+            json = exportJson(node);
+            data = JSON.stringify(json);
             blob = new Blob([data], {
               type: "text/plain"
             });
             return writer.write(blob);
-          });
+          } catch (_error) {
+            err = _error;
+            console.log(err);
+            if (callback != null) {
+              return callback(false);
+            }
+          }
         });
       };
       return this.root.getFile(path, {

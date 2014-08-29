@@ -10,6 +10,7 @@
         }
     },
     "permissions": [
-        {"fileSystem": ["write", "retainEntries", "directory"]}
+        {"fileSystem": ["write", "retainEntries", "directory"]},
+        "storage"
     ]
 }

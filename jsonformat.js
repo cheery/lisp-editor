@@ -2,35 +2,36 @@
 (function() {
   window.exportJson = function(node) {
     var a;
-    switch (node.type) {
-      case 'list':
-        return {
-          type: 'list',
-          label: node.label,
-          list: (function() {
-            var _i, _len, _ref, _results;
-            _ref = node.list;
-            _results = [];
-            for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-              a = _ref[_i];
-              _results.push(exportJson(a));
-            }
-            return _results;
-          })()
-        };
-      case 'text':
-        return {
-          type: 'text',
-          text: node.text,
-          label: node.label
-        };
-      case 'cr':
-        return {
-          type: 'cr'
-        };
-      default:
-        throw "unimplemented node at json export";
+    if (isList(node)) {
+      return {
+        type: 'list',
+        label: node.label,
+        list: (function() {
+          var _i, _len, _ref, _results;
+          _ref = node.list;
+          _results = [];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            a = _ref[_i];
+            _results.push(exportJson(a));
+          }
+          return _results;
+        })()
+      };
     }
+    if (isText(node)) {
+      return {
+        type: 'text',
+        text: node.text,
+        label: node.label
+      };
+    }
+    if (isMark(node)) {
+      return {
+        type: 'mark',
+        label: node.label
+      };
+    }
+    throw "unimplemented node at json export";
   };
 
   window.importJson = function(json) {
@@ -47,17 +48,14 @@
           }
           return _results;
         })();
-        node = new ListNode(list);
-        node.label = json.label;
+        node = newList(list, json.label);
         return node;
       case 'text':
-        node = text(json.text);
-        if (json.label != null) {
-          node.label = json.label;
-        }
+        node = newText(json.text, json.label);
         return node;
-      case 'cr':
-        return cr();
+      case 'mark':
+        node = newMark(json.label);
+        return node;
       default:
         throw "unimplemented node at json import";
     }

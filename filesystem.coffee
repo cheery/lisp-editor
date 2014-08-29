@@ -21,15 +21,26 @@ class window.EditorFileSystem
         @root.getFile path, {}, success, failure
 
     save: (path, node, callback) ->
-        failure = (error) =>
-            callback false, null
-        write = (entry) =>
-            entry.createWriter (writer) =>
-                writer.truncate 0
-                entry.createWriter (writer) =>
-                    writer.onwriteend = () =>
-                        callback true
-                    data = JSON.stringify exportJson node
+        failure = (error) ->
+            callback false, null if callback?
+        write = (entry) ->
+            entry.createWriter (writer) ->
+                try
+                    trunc = false
+                    writer.onwriteend = () ->
+                        unless trunc
+                            trunc = true
+                            writer.truncate this.position
+                            return
+                        callback true if callback?
+                    writer.onerror = (e) ->
+                        console.log "write fail", e
+                        callback false if callback?
+                    json = exportJson node
+                    data = JSON.stringify json
                     blob = new Blob([data], {type:"text/plain"})
-                    writer.write blob
+                    writer.write(blob)
+                catch err
+                    console.log err
+                    callback false if callback?
         @root.getFile path, {create: true}, write, failure
