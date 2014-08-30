@@ -29,6 +29,17 @@ condStyle = buildStyle defaultStyle, {
     selection: "yellow"
 }
 
+keyNames = {
+     8: "backspace"
+     9: "tab"
+    13: "ret"
+    16: "shift"
+    17: "ctrl"
+    18: "alt"
+    27: "esc"
+    46: "del"
+}
+
 addFrame = (container, node) ->
     if isMark(node, 'cr')
         return container.newline(node)
@@ -71,6 +82,10 @@ addFrame = (container, node) ->
     else if isText(node, 'int')
         container.push frame = newFrame node, buildStyle container.style, {
             color: "blue"
+        }
+    else if isText(node, 'string')
+        container.push frame = newFrame node, buildStyle container.style, {
+            background: "yellow"
         }
     else
         container.push frame = newFrame node, container.style
@@ -223,8 +238,8 @@ window.addEventListener 'load', () ->
         else if code == 13 and outerList(cursor).node == command_root
             submitCommand(command_root)
             return modeReset()
-#       else if code == ","
-#           go to nodeinsert mode
+        else if code == ","
+            return insertNodeMode
         else if code == 9
             cursor = tabRight cursor
         else if code == " "
@@ -250,22 +265,107 @@ window.addEventListener 'load', () ->
                 cursor.node.relabel newlabel
             else
                 cursor.node.relabel null
-#        else if code == '"'
-#            insertString() go into string insert mode.
+        else if code == '"'
+            if isText(cursor.node, "string")
+                return stringMode
+            cursor = splitNode splitNode cursor
+            cursor.node.put cursor.index, newList([node=newText('', 'string')]), false
+            cursor = {node, index:0}
+            return stringMode
         else if code == 8
             cursor = deleteLeft(cursor)
         else if code == 46
             cursor = deleteRight(cursor)
         else if typeof code == 'string'
-            if isText(cursor.node)
-                cursor.node.put cursor.index, newText(code), false
-                cursor.index += 1
-            else if isList(cursor.node)
-                cursor.node.put cursor.index, newList([node = newText(code)]), false
-                cursor.node  = node
-                cursor.index = 1
+            insertChar(code)
         return insertMode
     insertMode.tag = "insert"
+
+    stringMode = (code) ->
+        if typeof code == 'string'
+            insertChar(code)
+        else if code == 13
+            insertChar('\n')
+        else if code == 27
+            cursor = indexAfter(cursor.node) if cursor.node.parent?
+            return insertMode
+        return stringMode
+    stringMode.tag = "insert string"
+
+    insertChar = (code) ->
+        if isText(cursor.node)
+            cursor.node.put cursor.index, newText(code), false
+            cursor.index += 1
+        else if isList(cursor.node)
+            cursor.node.put cursor.index, newList([node = newText(code)]), false
+            cursor.node  = node
+            cursor.index = 1
+
+    insertNodeMode = (code) ->
+        if code == "k"
+            cursor = popList cursor, 1
+            cursor.block.relabel 'idx'
+            cursor.node.put(cursor.index, newList([cursor.block]), false)
+            cursor.index += 1
+        if code == "."
+            cursor = popList cursor, 2
+            cursor.block.relabel 'attr'
+            cursor.node.put(cursor.index, newList([cursor.block]), false)
+            cursor.index += 1
+        if code == "i"
+            cursor = popList cursor, 3
+            cursor.block.relabel 'infix'
+            cursor.node.put(cursor.index, newList([cursor.block]), false)
+            cursor.index += 1
+        if code == "c"
+            cursor = popList cursor, 1
+            cursor.block.relabel null
+            cursor.node.put(cursor.index, newList([cursor.block]), false)
+            cursor = {node:cursor.block, index:cursor.block.length}
+        if code == "l"
+            cursor = popList cursor, 1
+            cursor.block.relabel 'let'
+            cursor.node.put(cursor.index, newList([cursor.block]), false)
+            cursor = {node:cursor.block, index:cursor.block.length}
+        if code == "s"
+            cursor = popList cursor, 1
+            cursor.block.relabel 'set'
+            cursor.node.put(cursor.index, newList([cursor.block]), false)
+            cursor = {node:cursor.block, index:cursor.block.length}
+        if code == "b"
+            cursor = splitNode splitNode cursor
+            block = newList([cond = newList([])], 'cond')
+            cursor.node.put(cursor.index, newList([block]), false)
+            cursor = {node:cond, index:0}
+        if code == "w"
+            cursor = splitNode splitNode cursor
+            block = newList([], 'while')
+            cursor.node.put(cursor.index, newList([block]), false)
+            cursor = {node:block, index:block.length}
+        if code == "f"
+            cursor = splitNode splitNode cursor
+            block = newList([newList([]), newMark('cr')], 'func')
+            cursor.node.put(cursor.index, newList([block]), false)
+            cursor = {node:block, index:block.length}
+        if code == "a" and isText(cursor.node)
+            argument = cursor.node
+            current = cursor.node.parent
+            while current? and not isList(current, 'func')?
+                current = current.parent
+            if isList(current, 'func')
+                unless isList(current.list[0])
+                    current.put(0, newList([argument]))
+                else
+                    arglist = current.list[0]
+                    arglist.put(arglist.length, newList([argument]))
+        return insertMode
+    insertNodeMode.tag = "insert node"
+
+    popList = (cursor, count) ->
+        cursor = splitNode splitNode cursor
+        start = Math.max(0, cursor.index - count)
+        block = cursor.node.kill(start, cursor.index)
+        return {node:cursor.node, index:start, block}
 
     submitCommand = (node) ->
         return if node.length < 1 or not isList(node)
@@ -343,10 +443,16 @@ window.addEventListener 'load', () ->
         return mode
     visualMode.tag = "visual"
 
+    pressedKeys = []
+
     mode = selectMode
     keyboardEvents canvas, (keyCode, text) ->
         code = if text == "" then keyCode else text
         mode = mode(code)
+        now = Date.now()/1000
+        pressedKeys.push {time:now, code}
+        pressedKeys = pressedKeys.filter (item) ->
+            return item.time >= now - 2.0
 
     buildFrame = (root) ->
         aframe = newFrame root, buildStyle defaultStyle, {
@@ -371,12 +477,12 @@ window.addEventListener 'load', () ->
         if command_root?
             comm_frame = buildFrame(command_root)
             comm_frame.x = 50
-            comm_frame.y = canvas.height - comm_frame.height - 16
+            comm_frame.y = canvas.height - comm_frame.height - 16 - 30
             bc.fillStyle = "#aaa"
             bc.fillRect(0, comm_frame.y, canvas.width, comm_frame.height)
             comm_frame.paint(bc)
 
-        if (near = frame.nearest(mouse.point...))?
+        if (near = frame.nearest(mouse.point...))? and near.dist < 100
             drawSelection(bc, near.frame, near.index, near.index, "black")
 
         if cursor? and trail? and cursor.node == trail.node
@@ -392,7 +498,6 @@ window.addEventListener 'load', () ->
                 if cframe?
                     drawSelection(bc, cframe, cursor.index, cursor.index, "blue")
 
-
         bc.font = "12px sans-serif"
         bc.fillStyle = 'black'
         bc.fillRect(0, 0, canvas.width, 16)
@@ -400,11 +505,26 @@ window.addEventListener 'load', () ->
         bc.fillText " #{path}", 0, 11
 
         bc.fillStyle = 'black'
-        bc.fillText " Some commands in the help are missing due to an update.", 0, 30
-
         bc.fillRect(0, canvas.height-16, canvas.width, 16)
         bc.fillStyle = 'white'
         bc.fillText " -- #{mode.tag} --", 0, canvas.height - 5
+
+
+        bc.strokeStyle = 'black'
+        x = 10
+        for item in pressedKeys
+            if typeof item.code == 'string'
+                name = item.code
+            else
+                name = keyNames[item.code] or item.code
+
+            w = bc.measureText(name).width
+            bc.fillStyle = 'white'
+            bc.fillRect x, canvas.height-40, w + 20, 15
+            bc.strokeRect x, canvas.height-40, w + 20, 20
+            bc.fillStyle = 'black'
+            bc.fillText name, x+10, canvas.height-30
+            x += w + 30
 
         requestAnimationFrame draw
     draw()
