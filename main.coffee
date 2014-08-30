@@ -728,7 +728,7 @@ selectionRange = (trail, cursor) ->
     return {start, stop}
 
 drawSelection = (bc, frame, start, stop, style) ->
-    bc.globalAlpha = 0.1
+    bc.globalAlpha = 1.0
     parent = frame.parent
     while parent?
         bc.strokeStyle = parent.style.selection

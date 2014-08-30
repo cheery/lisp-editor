@@ -1054,7 +1054,7 @@
 
   drawSelection = function(bc, frame, start, stop, style) {
     var parent, x, y, _ref;
-    bc.globalAlpha = 0.1;
+    bc.globalAlpha = 1.0;
     parent = frame.parent;
     while (parent != null) {
       bc.strokeStyle = parent.style.selection;
