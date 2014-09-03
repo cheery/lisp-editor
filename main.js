@@ -49,7 +49,7 @@
   };
 
   addFrame = function(container, node) {
-    var first, frame, item, row, subitem, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2, _ref3, _ref4;
+    var first, frame, item, row, subitem, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _len5, _len6, _m, _n, _o, _ref, _ref1, _ref2, _ref3, _ref4, _ref5, _ref6;
     if (isMark(node, 'cr')) {
       return container.newline(node);
     }
@@ -96,6 +96,26 @@
         item = _ref3[_l];
         addFrame(frame, item);
       }
+    } else if (isList(node, 'let') && node.length >= 2) {
+      container.push(frame = newFrame(node, defaultStyle));
+      addFrame(frame, node.list[0]);
+      frame.push(newDeco("←", labelStyle));
+      _ref4 = node.list.slice(1, node.length);
+      for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
+        item = _ref4[_m];
+        addFrame(frame, item);
+      }
+    } else if (isList(node, 'set') && node.length >= 2) {
+      container.push(frame = newFrame(node, defaultStyle));
+      addFrame(frame, node.list[0]);
+      frame.push(newDeco("←", buildStyle(labelStyle, {
+        color: "black"
+      })));
+      _ref5 = node.list.slice(1, node.length);
+      for (_n = 0, _len5 = _ref5.length; _n < _len5; _n++) {
+        item = _ref5[_n];
+        addFrame(frame, item);
+      }
     } else if (isList(node)) {
       container.push(frame = newFrame(node, buildStyle(defaultStyle, {
         selection: "blue"
@@ -103,9 +123,9 @@
       if (node.label != null) {
         frame.push(newDeco(node.label, labelStyle));
       }
-      _ref4 = node.list;
-      for (_m = 0, _len4 = _ref4.length; _m < _len4; _m++) {
-        item = _ref4[_m];
+      _ref6 = node.list;
+      for (_o = 0, _len6 = _ref6.length; _o < _len6; _o++) {
+        item = _ref6[_o];
         addFrame(frame, item);
       }
     } else if (isText(node, 'int')) {
@@ -1072,7 +1092,7 @@
     } else {
       parent = frame.parent;
     }
-    while (parent != null) {
+    while ((parent != null) && (parent.parent != null)) {
       bc.strokeStyle = parent.style.selection;
       _ref = parent.getPosition(), x = _ref.x, y = _ref.y;
       bc.strokeRect(x, y, parent.width, parent.height);

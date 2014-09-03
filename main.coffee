@@ -71,6 +71,16 @@ addFrame = (container, node) ->
         #frame.push newDeco("{", labelStyle)
         addFrame frame, item for item in node.list
         #frame.push newDeco("}", labelStyle)
+    else if isList(node, 'let') and node.length >= 2
+        container.push frame = newFrame node, defaultStyle
+        addFrame frame, node.list[0]
+        frame.push newDeco("←", labelStyle)
+        addFrame frame, item for item in node.list[1...node.length]
+    else if isList(node, 'set') and node.length >= 2
+        container.push frame = newFrame node, defaultStyle
+        addFrame frame, node.list[0]
+        frame.push newDeco("←", buildStyle labelStyle, {color: "black"})
+        addFrame frame, item for item in node.list[1...node.length]
     else if isList(node)
         container.push frame = newFrame node, buildStyle defaultStyle, {
             selection: "blue"
@@ -739,7 +749,7 @@ drawSelection = (bc, frame, start, stop, style, listStyle) ->
         style = listStyle
     else
         parent = frame.parent
-    while parent?
+    while parent? and parent.parent?
         bc.strokeStyle = parent.style.selection
         {x, y} = parent.getPosition()
         bc.strokeRect(x, y, parent.width, parent.height)
