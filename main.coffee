@@ -7,7 +7,7 @@ defaultStyle = {
     bottomPadding: 0
     spacing: 5
     indent: 10
-    verticalSpacing: 0
+    verticalSpacing: 16/4
     color: "black"
     selection: "blue"
     #background: "green"
@@ -213,10 +213,16 @@ window.addEventListener 'load', () ->
             cursor = stepLeft cursor
         if code == "l"
             cursor = stepRight cursor
-        if code == "j"
-            cursor = flowLeft cursor
         if code == "k"
+            cursor = flowLeft cursor
+        if code == "j"
             cursor = flowRight cursor
+        if code == "0"
+            cursor.node = cursor.node.parent if isText(cursor.node) and cursor.node.parent?
+            cursor.index = 0
+        if code == "$"
+            cursor.node = cursor.node.parent if isText(cursor.node) and cursor.node.parent?
+            cursor.index = cursor.node.length
         if code == "w" or code == 9
             cursor = tabRight cursor
         if code == "e"
@@ -398,13 +404,13 @@ window.addEventListener 'load', () ->
     visualMode = (code) ->
         if code == 27
             return modeReset()
-        if code == "h" or code == "j"
+        if code == "h" or code == "k"
             {node, index} = cursor
             if 0 < index
                 cursor = {node, index:index-1}
             else if node.parent?
                 trail = cursor = indexBefore node
-        if code == "l" or code == "k"
+        if code == "l" or code == "j"
             {node, index} = cursor
             if index < node.length - 1
                 cursor = {node, index:index+1}
@@ -457,7 +463,6 @@ window.addEventListener 'load', () ->
     buildFrame = (root) ->
         aframe = newFrame root, buildStyle defaultStyle, {
             indent: 0
-            verticalSpacing: 25
         }
         for node in aframe.node.list
             addFrame(aframe, node)
@@ -483,20 +488,20 @@ window.addEventListener 'load', () ->
             comm_frame.paint(bc)
 
         if (near = frame.nearest(mouse.point...))? and near.dist < 100
-            drawSelection(bc, near.frame, near.index, near.index, "black")
+            drawSelection(bc, near.frame, near.index, near.index, "black", "white")
 
         if cursor? and trail? and cursor.node == trail.node
             if (cframe = frame.find cursor.node)?
                 {start, stop} = selectionRange trail, cursor
-                drawSelection(bc, cframe, start, stop, "blue")
+                drawSelection(bc, cframe, start, stop, "blue", "cyan")
         else if cursor?
             cframe = frame.find cursor.node
             if cframe?
-                drawSelection(bc, cframe, cursor.index, cursor.index, "blue")
+                drawSelection(bc, cframe, cursor.index, cursor.index, "blue", "cyan")
             if comm_frame?
                 cframe = comm_frame.find cursor.node
                 if cframe?
-                    drawSelection(bc, cframe, cursor.index, cursor.index, "blue")
+                    drawSelection(bc, cframe, cursor.index, cursor.index, "blue", "cyan")
 
         bc.font = "12px sans-serif"
         bc.fillStyle = 'black'
@@ -727,9 +732,13 @@ selectionRange = (trail, cursor) ->
     stop  = Math.max(trail.index+1, cursor.index+1)
     return {start, stop}
 
-drawSelection = (bc, frame, start, stop, style) ->
+drawSelection = (bc, frame, start, stop, style, listStyle) ->
     bc.globalAlpha = 1.0
-    parent = frame.parent
+    if isList(frame.node)
+        parent = frame
+        style = listStyle
+    else
+        parent = frame.parent
     while parent?
         bc.strokeStyle = parent.style.selection
         {x, y} = parent.getPosition()

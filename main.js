@@ -11,7 +11,7 @@
     bottomPadding: 0,
     spacing: 5,
     indent: 10,
-    verticalSpacing: 0,
+    verticalSpacing: 16 / 4,
     color: "black",
     selection: "blue"
   };
@@ -295,11 +295,23 @@
       if (code === "l") {
         cursor = stepRight(cursor);
       }
-      if (code === "j") {
+      if (code === "k") {
         cursor = flowLeft(cursor);
       }
-      if (code === "k") {
+      if (code === "j") {
         cursor = flowRight(cursor);
+      }
+      if (code === "0") {
+        if (isText(cursor.node) && (cursor.node.parent != null)) {
+          cursor.node = cursor.node.parent;
+        }
+        cursor.index = 0;
+      }
+      if (code === "$") {
+        if (isText(cursor.node) && (cursor.node.parent != null)) {
+          cursor.node = cursor.node.parent;
+        }
+        cursor.index = cursor.node.length;
       }
       if (code === "w" || code === 9) {
         cursor = tabRight(cursor);
@@ -559,7 +571,7 @@
       if (code === 27) {
         return modeReset();
       }
-      if (code === "h" || code === "j") {
+      if (code === "h" || code === "k") {
         node = cursor.node, index = cursor.index;
         if (0 < index) {
           cursor = {
@@ -570,7 +582,7 @@
           trail = cursor = indexBefore(node);
         }
       }
-      if (code === "l" || code === "k") {
+      if (code === "l" || code === "j") {
         node = cursor.node, index = cursor.index;
         if (index < node.length - 1) {
           cursor = {
@@ -655,8 +667,7 @@
     buildFrame = function(root) {
       var aframe, node, _i, _len, _ref;
       aframe = newFrame(root, buildStyle(defaultStyle, {
-        indent: 0,
-        verticalSpacing: 25
+        indent: 0
       }));
       _ref = aframe.node.list;
       for (_i = 0, _len = _ref.length; _i < _len; _i++) {
@@ -684,22 +695,22 @@
         comm_frame.paint(bc);
       }
       if (((near = frame.nearest.apply(frame, mouse.point)) != null) && near.dist < 100) {
-        drawSelection(bc, near.frame, near.index, near.index, "black");
+        drawSelection(bc, near.frame, near.index, near.index, "black", "white");
       }
       if ((cursor != null) && (trail != null) && cursor.node === trail.node) {
         if ((cframe = frame.find(cursor.node)) != null) {
           _ref = selectionRange(trail, cursor), start = _ref.start, stop = _ref.stop;
-          drawSelection(bc, cframe, start, stop, "blue");
+          drawSelection(bc, cframe, start, stop, "blue", "cyan");
         }
       } else if (cursor != null) {
         cframe = frame.find(cursor.node);
         if (cframe != null) {
-          drawSelection(bc, cframe, cursor.index, cursor.index, "blue");
+          drawSelection(bc, cframe, cursor.index, cursor.index, "blue", "cyan");
         }
         if (comm_frame != null) {
           cframe = comm_frame.find(cursor.node);
           if (cframe != null) {
-            drawSelection(bc, cframe, cursor.index, cursor.index, "blue");
+            drawSelection(bc, cframe, cursor.index, cursor.index, "blue", "cyan");
           }
         }
       }
@@ -1052,10 +1063,15 @@
     };
   };
 
-  drawSelection = function(bc, frame, start, stop, style) {
+  drawSelection = function(bc, frame, start, stop, style, listStyle) {
     var parent, x, y, _ref;
     bc.globalAlpha = 1.0;
-    parent = frame.parent;
+    if (isList(frame.node)) {
+      parent = frame;
+      style = listStyle;
+    } else {
+      parent = frame.parent;
+    }
     while (parent != null) {
       bc.strokeStyle = parent.style.selection;
       _ref = parent.getPosition(), x = _ref.x, y = _ref.y;
