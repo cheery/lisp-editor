@@ -143,7 +143,7 @@
   };
 
   window.addEventListener('load', function() {
-    var bc, boot_filesystem, buildFrame, canvas, command_root, copybuffer, cursor, draw, editor, filesystem_must_open, frame, fs, help, insertChar, insertMode, insertNodeMode, isSymbol, loadFile, mode, modeMotion, modeReset, mouse, path, popList, pressedKeys, root, selectMode, storeFile, stringMode, submitCommand, trail, visualMode;
+    var bc, boot_filesystem, buildFrame, canvas, command_root, copybuffer, cursor, draw, editor, filesystem_must_open, frame, fs, help, insertChar, insertMode, insertNodeMode, isSymbol, loadFile, mode, modeMotion, modeReset, mouse, path, popList, pressedKeys, root, scroll, scrollStep, selectMode, storeFile, stringMode, submitCommand, trail, viewMode, visualMode;
     fs = null;
     path = "index.json";
     root = newList([]);
@@ -155,6 +155,7 @@
     copybuffer = null;
     trail = null;
     frame = null;
+    scroll = 0;
     if ((typeof chrome !== "undefined" && chrome !== null) && (chrome.fileSystem != null)) {
       help = document.getElementById("help");
       help.style.display = "none";
@@ -209,6 +210,19 @@
     canvas = autoResize(document.getElementById('editor'));
     bc = canvas.getContext('2d');
     mouse = mouseInput(canvas);
+    scrollStep = function() {
+      return Math.max(10, canvas.height / 2 - 50);
+    };
+    document.addEventListener('mousewheel', function(ev) {
+      var step;
+      step = scrollStep();
+      if (ev.wheelDelta > 0) {
+        scroll -= step;
+      }
+      if (ev.wheelDelta < 0) {
+        return scroll += step;
+      }
+    });
     canvas.addEventListener('click', function(ev) {
       var mode, near;
       ev.preventDefault();
@@ -305,9 +319,22 @@
           }
         }
       }
+      if (code === "z") {
+        return viewMode;
+      }
       return selectMode;
     };
     selectMode.tag = "select";
+    viewMode = function(code) {
+      if (code === 'k') {
+        scroll -= scrollStep();
+      }
+      if (code === 'j') {
+        scroll += scrollStep();
+      }
+      return selectMode;
+    };
+    viewMode.tag = "view";
     modeMotion = function(code) {
       if (code === "h") {
         cursor = stepLeft(cursor);
@@ -702,8 +729,9 @@
       bc.fillStyle = "#ccc";
       bc.fillRect(0, 0, canvas.width, canvas.height);
       frame = buildFrame(root);
+      scroll = Math.max(0, Math.min(scroll, frame.height));
       frame.x = 50;
-      frame.y = 50;
+      frame.y = 50 - scroll;
       frame.paint(bc);
       comm_frame = null;
       if (command_root != null) {

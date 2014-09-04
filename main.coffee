@@ -110,6 +110,7 @@ window.addEventListener 'load', () ->
     copybuffer = null
     trail  = null
     frame = null
+    scroll = 0
 
     if chrome? and chrome.fileSystem?
         help = document.getElementById("help")
@@ -146,6 +147,13 @@ window.addEventListener 'load', () ->
     mouse = mouseInput(canvas)
 
     #root = newList([ newList([ newList([ newText("square"), newText("x") ]), newMark('cr'), newList([ newText("x"), newText("*"), newText("x") ], 'infix') ], 'define'), newMark('cr'), newList([ newList([ newText("factorial"), newText("n") ]), newMark('cr'), newList([ newList([ newList([ newText("n"), newText("="), newText("1", "int") ], 'infix'), newMark("cr"), newText("1", "int") ]) newList([ newList([ newText("n"), newText("="), newText("0", "int") ], 'infix'), newMark("cr"), newText("1", "int") ]), newList([ newMark("cr"), newList([ newText("n"), newText("*"), newList([ newText("factorial"), newList([ newText("n"), newText("-"), newText("1", "int") ], 'infix') ]) ], 'infix') ], 'else') ], 'cond') ], 'define') ])
+
+    scrollStep = () -> Math.max(10, canvas.height / 2 - 50)
+
+    document.addEventListener 'mousewheel', (ev) ->
+        step = scrollStep()
+        scroll -= step if ev.wheelDelta > 0
+        scroll += step if ev.wheelDelta < 0
 
     canvas.addEventListener 'click', (ev) ->
         ev.preventDefault()
@@ -212,8 +220,18 @@ window.addEventListener 'load', () ->
                 bulldoze.node.put bulldoze.index, node, false
                 if cursor.node == node
                     cursor.index += bulldoze.index
+        if code == "z"
+            return viewMode
         return selectMode
     selectMode.tag = "select"
+
+    viewMode = (code) ->
+        if code == 'k'
+            scroll -= scrollStep()
+        if code == 'j'
+            scroll += scrollStep()
+        return selectMode
+    viewMode.tag = "view"
 
 #        if txt == '%'
 #            window.evaluateDocument(currentdoc)
@@ -484,8 +502,11 @@ window.addEventListener 'load', () ->
         bc.fillRect(0, 0, canvas.width, canvas.height)
 
         frame = buildFrame(root)
+
+        scroll = Math.max(0, Math.min(scroll, frame.height))
+
         frame.x = 50
-        frame.y = 50
+        frame.y = 50 - scroll
         frame.paint(bc)
 
         comm_frame = null
