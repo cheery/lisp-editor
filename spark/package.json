@@ -1,0 +1,7 @@
+{
+    "name": "lisp-editor",
+    "main": "index.html",
+    "window": {
+        "toolbar": false
+    }
+}

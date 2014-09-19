@@ -1,0 +1,2 @@
+" :so %
+map <C-Enter> :w !nc -U gate.sock<CR><CR>
