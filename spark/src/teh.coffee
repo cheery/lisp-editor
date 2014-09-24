@@ -338,7 +338,7 @@ paintCircle = (bc, x, y, radius) ->
 if false
     env.relayout = () ->
         teh  = {px} = env.teh
-        root = packHBox [
+        root = teh.hbox [
             teh.Box(200, 100, 100)
             teh.Glue(10, px(5), px(5))
             teh.Box(20, 10, 10)
@@ -346,8 +346,8 @@ if false
             teh.vbox [
                 teh.Glue(10, px(0), px(1, 1))
                 teh.hbox [
-                    new Glue(10, px(0), px(1, 1))
-                    new Box(5, 10, 10, 0)
+                    teh.Glue(10, px(0), px(1, 1))
+                    teh.Box(5, 10, 10, 0)
                 ], 30
                 teh.Glue(10, px(2), px(2))
                 mid = teh.Box(30, 2, 2)

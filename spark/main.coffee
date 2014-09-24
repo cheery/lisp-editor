@@ -22,6 +22,7 @@ GLOBAL.env = env = {}
 
 require './src/node'
 require './src/blip'
+require './src/teh'
 
 module.exports = (document) ->
     env.canvas = canvas = document.getElementById('editor')
