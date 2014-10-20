@@ -27,10 +27,15 @@ require './src/teh'
 module.exports = (document) ->
     env.canvas = canvas = document.getElementById('editor')
     env.bc = bc = canvas.getContext '2d'
+    env.mouse = mouseInput(canvas)
     window.addEventListener 'resize', resize = () ->
         canvas.width = canvas.offsetWidth
         canvas.height = canvas.offsetHeight
     resize()
+    window.addEventListener 'mousedown', (args...) -> env.mousedown(args...)
+    window.addEventListener 'mouseup',   (args...) -> env.mouseup(args...)
+    env.mousedown = () ->
+    env.mouseup   = () ->
     env.clearScreen = () ->
         bc.clearRect 0, 0, canvas.width, canvas.height
     env.draw = () ->
@@ -40,3 +45,11 @@ module.exports = (document) ->
     env.draw()
 
     env.readBlipFile "samples/stdlib.blip"
+
+mouseInput = (canvas) ->
+    mouse = {x:0, y:0}
+    canvas.addEventListener 'mousemove', mousemove = (e) ->
+        rect = canvas.getBoundingClientRect()
+        mouse.x = (e.clientX - rect.left) / rect.width * canvas.width
+        mouse.y = (e.clientY - rect.top) / rect.height * canvas.height
+    return mouse

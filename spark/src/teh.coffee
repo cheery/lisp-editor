@@ -3,6 +3,7 @@ class Box
         @parent = null
         @x = 0
         @y = 0
+        @vertical = false
 
     trueWidth: (vertical) ->
         return @width + @shift if vertical
@@ -16,10 +17,8 @@ class Box
         return @depth if vertical
         return @depth + @shift
 
-    paintMetrics: (bc, vertical) ->
-        width  = @trueWidth(vertical)
-        height = @trueHeight(vertical)
-        depth  = @trueDepth(vertical)
+    paintMetrics: (bc) ->
+        {width, height, depth} = @getsize()
         bc.strokeStyle = 'black'
         paintCircle(bc, @x, @y, 2)
         bc.beginPath()
@@ -28,13 +27,22 @@ class Box
         bc.stroke()
         bc.strokeRect(@x, @y-height, width, height+depth)
 
-    paint: (bc, vertical) ->
+    paint: (bc) ->
         # an example, not used
         #bc.fillStyle = 'black'
-        #width  = @trueWidth(vertical)
-        #height = @trueHeight(vertical)
-        #depth  = @trueDepth(vertical)
+        #{width, height, depth} = @getsize()
         #bc.fillRect(@x, @y-height, width, height+depth)
+
+    getsize: () ->
+        return {
+            width: @trueWidth(@vertical)
+            height: @trueHeight(@vertical)
+            depth: @trueDepth(@vertical)
+        }
+
+    absolutePosition: (x=@x, y=@y) ->
+        return @parent.absoluteChildPosition(x, y) if @parent?
+        return {x, y}
 
 class Glue
     constructor: (@size, @shrink, @stretch) ->
@@ -43,6 +51,7 @@ class Glue
         @y = 0
         @strain = 0
         @computedSize = @size
+        @vertical = false
 
     trueWidth: (vertical) ->
         return 0 if vertical
@@ -65,8 +74,8 @@ class Glue
             @computedSize = @size + @stretch.x * pc.x
             @strain = pc.x
 
-    computeFill: (vertical) ->
-        if vertical
+    getsize: () ->
+        if @vertical
             return {
                 width:  @parent.width
                 height: 0
@@ -79,7 +88,7 @@ class Glue
                 depth:  @parent.depth
             }
 
-    paintMetrics: (bc, vertical) ->
+    paintMetrics: (bc) ->
         if @strain <= 0
             w = -@strain
             bc.strokeStyle = rgb(w, 1-w, 0)
@@ -89,15 +98,15 @@ class Glue
         paintCircle(bc, @x, @y, 2)
         bc.beginPath()
         bc.moveTo(@x, @y)
-        unless vertical
+        unless @vertical
             bc.lineTo(@x+@computedSize, @y)
         else
             bc.lineTo(@x, @y+@computedSize)
         bc.stroke()
 
-    paint: (bc, vertical) ->
+    paint: (bc) ->
         # an example, not used.
-        #        {width, height, depth} = @computeFill(vertical)
+        #        {width, height, depth} = @getsize()
         #        if vertical
         #            bc.fillStyle = '#eea'
         #            bc.fillRect @x, @y-height, width, height+depth
@@ -105,12 +114,17 @@ class Glue
         #            bc.fillStyle = '#aea'
         #            bc.fillRect @x, @y-height, width, height+depth
 
+    absolutePosition: (x=0, y=0) ->
+        return @parent.absoluteChildPosition(x, y) if @parent?
+        return {x, y}
+
 class HBox
     constructor: (@contents, @glue, @width, @height, @depth, @shift) ->
-        attachNodes(@)
+        attachNodes(@, false)
         @parent = null
         @x = 0
         @y = 0
+        @vertical = false
 
     trueWidth: (vertical) ->
         return @width + @shift if vertical
@@ -124,34 +138,50 @@ class HBox
         return @depth if vertical
         return @depth + @shift
 
-    paintMetrics: (bc, vertical) ->
-        width  = @trueWidth(vertical)
-        height = @trueHeight(vertical)
-        depth  = @trueDepth(vertical)
+    getsize: () ->
+        return {
+            width: @trueWidth(@vertical)
+            height: @trueHeight(@vertical)
+            depth: @trueDepth(@vertical)
+        }
+
+    paintMetrics: (bc) ->
+        {width, height, depth} = @getsize()
         bc.strokeStyle = "gray"
         bc.strokeRect(@x, @y-height, width, height+depth)
         bc.save()
         bc.translate(@x, @y)
         for box in @contents
-            box.paintMetrics(bc, false)
+            box.paintMetrics(bc)
         bc.restore()
 
-    paintBackground: (bc, vertical) ->
+    paintBackground: (bc) ->
 
-    paint: (bc, vertical) ->
-        @paintBackground(bc, vertical)
+    paint: (bc) ->
+        @paintBackground(bc)
         bc.save()
         bc.translate(@x, @y)
         for box in @contents
             box.paint(bc, false)
         bc.restore()
 
+    absolutePosition: (x=0, y=0) ->
+        return @parent.absoluteChildPosition(x, y) if @parent?
+        return {x, y}
+
+    absoluteChildPosition: (x=0, y=0) ->
+        x += @x
+        y += @y
+        return @parent.absoluteChildPosition(x, y) if @parent?
+        return {x, y}
+
 class VBox
     constructor: (@contents, @glue, @width, @vsize, @anchor, @shift) ->
-        attachNodes(@)
+        attachNodes(@, true)
         @parent = null
         @x = 0
         @y = 0
+        @vertical = false
 
     trueWidth: (vertical) ->
         return @width + @shift if vertical
@@ -165,16 +195,21 @@ class VBox
         return @vsize - @anchor if vertical
         return @vsize - @anchor + @shift
 
-    paintMetrics: (bc, vertical) ->
-        width  = @trueWidth(vertical)
-        height = @trueHeight(vertical)
-        depth  = @trueDepth(vertical)
+    getsize: () ->
+        return {
+            width: @trueWidth(@vertical)
+            height: @trueHeight(@vertical)
+            depth: @trueDepth(@vertical)
+        }
+
+    paintMetrics: (bc) ->
+        {width, height, depth} = @getsize()
         bc.strokeStyle = "gray"
         bc.strokeRect(@x, @y-height, width, height+depth)
         bc.save()
         bc.translate(@x, @y-@anchor)
         for box in @contents
-            box.paintMetrics(bc, true)
+            box.paintMetrics(bc)
         bc.restore()
 
     paintBackground: (bc, vertical) ->
@@ -184,17 +219,28 @@ class VBox
         bc.save()
         bc.translate(@x, @y-@anchor)
         for box in @contents
-            box.paint(bc, true)
+            box.paint(bc)
         bc.restore()
 
-attachNodes = (container) ->
-    for node in container.contents
-        attachNode(container, node)
+    absolutePosition: (x=0, y=0) ->
+        return @parent.absoluteChildPosition(x, y) if @parent?
+        return {x, y}
 
-attachNode = (container, node) ->
+    absoluteChildPosition: (x=0, y=0) ->
+        x += @x
+        y += @y - @trueHeight(@vertical)
+        return @parent.absoluteChildPosition(x, y) if @parent?
+        return {x, y}
+
+attachNodes = (container, vertical) ->
+    for node in container.contents
+        attachNode(container, node, vertical)
+
+attachNode = (container, node, vertical) ->
     if node.parent?
         throw "you should not reuse box nodes"
     node.parent = container
+    node.vertical = vertical
 
 nativeWidth  = (nodes) ->
     width = 0

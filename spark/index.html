@@ -8,6 +8,10 @@
 <body>
     <canvas id="editor"></canvas>
     <script>
+        process.on('uncaughtException', function(e) {
+            console.log(e);
+        });
+        require('nw.gui').Window.get().showDevTools();
         require('./main')(document);
     </script>
 </body>
