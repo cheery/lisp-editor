@@ -1,7 +1,45 @@
 {teh}   = env
 
-env.keyboard = (code) ->
-    console.log code
+env.keynames = {
+     8: "backspace"
+     9: "tab"
+    13: "return"
+    16: "shift"
+    17: "ctrl"
+    18: "alt"
+    27: "esc"
+    46: "del"
+}
+
+env.select = {modeline: "select", key:{}, text: (->), badkey: (->)}
+env.insert = {modeline: "insert", key:{}, text: (->), badkey: (->)}
+
+env.select.reset = () ->
+    console.log 'reset'
+
+env.select.key.i = () ->
+    env.current = env.insert
+
+env.insert.reset = () ->
+    console.log 'insert reset'
+
+env.current = env.select
+env.keyboard = (code, text) ->
+    code = env.keynames[code] ? code
+    mode = env.current
+    if code == 'esc'
+        mode.reset()
+        env.current = env.select
+    else if text != ""
+        mode.text(text)
+        if mode.key[text]?
+            mode.key[text]()
+        else
+            mode.badkey(code, text)
+    else if mode[code]?
+        mode[code]()
+    else
+        mode.badkey(code, text)
 
 vbox_context = (scope, indent=false, align=teh.alignTop) ->
     return {
@@ -192,6 +230,12 @@ env.draw = () ->
             node.paintMetrics(bc)
         for node in belowCarets(best.node)
             node.paintMetrics(bc)
+
+    bc.fillStyle = 'black'
+    bc.fillRect 0, env.canvas.height-20, env.canvas.width, 20
+    bc.font = "16px sans-serif"
+    bc.fillStyle = 'white'
+    bc.fillText env.current.modeline, 4, env.canvas.height - 5
 
     window.requestAnimationFrame(env.draw)
 #isFunction = (obj) -> obj instanceof Function

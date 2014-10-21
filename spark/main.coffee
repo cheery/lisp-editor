@@ -66,7 +66,7 @@ keyboardEvents = (document, canvas) ->
         ev.preventDefault() if keyCode == 9
         node.value = ""
         keyhandler = () ->
-            env.keyboard(if node.value == "" then keyCode else node.value)
+            env.keyboard(keyCode, node.value)
         setTimeout keyhandler, 0
     node.focus()
 
