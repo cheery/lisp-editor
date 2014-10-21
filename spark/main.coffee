@@ -25,6 +25,7 @@ require './src/blip'
 require './src/teh'
 
 module.exports = (document) ->
+    env.document = env.readBlipFile "samples/stdlib.blip"
     env.canvas = canvas = document.getElementById('editor')
     env.bc = bc = canvas.getContext '2d'
     env.mouse = mouseInput(canvas)
@@ -36,6 +37,7 @@ module.exports = (document) ->
     window.addEventListener 'mouseup',   (args...) -> env.mouseup(args...)
     env.mousedown = () ->
     env.mouseup   = () ->
+    env.keyboard  = () ->
     env.clearScreen = () ->
         bc.clearRect 0, 0, canvas.width, canvas.height
     env.draw = () ->
@@ -43,8 +45,7 @@ module.exports = (document) ->
         bc.fillRect 50, 50, canvas.width - 100, canvas.height - 100
         window.requestAnimationFrame env.draw
     env.draw()
-
-    env.readBlipFile "samples/stdlib.blip"
+    keyboardEvents(document, canvas)
 
 mouseInput = (canvas) ->
     mouse = {x:0, y:0}
@@ -53,3 +54,21 @@ mouseInput = (canvas) ->
         mouse.x = (e.clientX - rect.left) / rect.width * canvas.width
         mouse.y = (e.clientY - rect.top) / rect.height * canvas.height
     return mouse
+
+keyboardEvents = (document, canvas) ->
+    node = document.createElement("input")
+    node.style.position = "absolute"
+    node.style.left = "-10000px"
+    canvas.parentNode.insertBefore(node, canvas)
+
+    node.addEventListener 'keydown', (ev) ->
+        keyCode = ev.keyCode
+        ev.preventDefault() if keyCode == 9
+        node.value = ""
+        keyhandler = () ->
+            env.keyboard(if node.value == "" then keyCode else node.value)
+        setTimeout keyhandler, 0
+    node.focus()
+
+    canvas.addEventListener 'click', () ->
+        node.focus()
